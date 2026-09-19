@@ -1,6 +1,8 @@
 package com.smartdesk.api.common.web;
 
+import com.smartdesk.api.identity.service.AccountUnavailableException;
 import com.smartdesk.api.identity.service.EmailAlreadyRegisteredException;
+import com.smartdesk.api.identity.service.InvalidCredentialsException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -45,7 +47,8 @@ public class GlobalExceptionHandler {
     ) {
         Map<String, String> fieldErrors = new LinkedHashMap<>();
 
-        for (FieldError fieldError : exception.getBindingResult().getFieldErrors()) {
+        for (FieldError fieldError :
+                exception.getBindingResult().getFieldErrors()) {
             fieldErrors.putIfAbsent(
                     fieldError.getField(),
                     fieldError.getDefaultMessage()
@@ -62,6 +65,44 @@ public class GlobalExceptionHandler {
                         "Request validation failed.",
                         request.getRequestURI(),
                         fieldErrors
+                )
+        );
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidCredentials(
+            InvalidCredentialsException exception,
+            HttpServletRequest request
+    ) {
+        HttpStatus status = HttpStatus.UNAUTHORIZED;
+
+        return ResponseEntity.status(status).body(
+                new ApiErrorResponse(
+                        Instant.now(),
+                        status.value(),
+                        status.getReasonPhrase(),
+                        exception.getMessage(),
+                        request.getRequestURI(),
+                        Map.of()
+                )
+        );
+    }
+
+    @ExceptionHandler(AccountUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnavailableAccount(
+            AccountUnavailableException exception,
+            HttpServletRequest request
+    ) {
+        HttpStatus status = HttpStatus.FORBIDDEN;
+
+        return ResponseEntity.status(status).body(
+                new ApiErrorResponse(
+                        Instant.now(),
+                        status.value(),
+                        status.getReasonPhrase(),
+                        exception.getMessage(),
+                        request.getRequestURI(),
+                        Map.of()
                 )
         );
     }
