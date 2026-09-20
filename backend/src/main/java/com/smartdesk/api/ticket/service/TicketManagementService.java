@@ -1,6 +1,7 @@
 package com.smartdesk.api.ticket.service;
 
 import com.smartdesk.api.ticket.model.ServiceTicket;
+import com.smartdesk.api.ticket.model.TicketActivityType;
 import com.smartdesk.api.ticket.model.TicketStatus;
 import com.smartdesk.api.ticket.repository.ServiceTicketRepository;
 import org.springframework.stereotype.Service;
@@ -16,11 +17,14 @@ import java.util.UUID;
 public class TicketManagementService {
 
     private final ServiceTicketRepository serviceTicketRepository;
+    private final TicketCollaborationService collaborationService;
 
     public TicketManagementService(
-            ServiceTicketRepository serviceTicketRepository
+            ServiceTicketRepository serviceTicketRepository,
+            TicketCollaborationService collaborationService
     ) {
         this.serviceTicketRepository = serviceTicketRepository;
+        this.collaborationService = collaborationService;
     }
 
     @Transactional(readOnly = true)
@@ -52,7 +56,9 @@ public class TicketManagementService {
                 command.priority()
         );
 
-        return toDetails(serviceTicketRepository.saveAndFlush(ticket));
+        ServiceTicket saved = serviceTicketRepository.saveAndFlush(ticket);
+        collaborationService.audit(saved, saved.getRequester(), TicketActivityType.UPDATED, "Ticket details updated");
+        return toDetails(saved);
     }
 
     @Transactional
@@ -65,7 +71,9 @@ public class TicketManagementService {
         ensureRequesterCanModify(ticket);
         ticket.cancel();
 
-        return toDetails(serviceTicketRepository.saveAndFlush(ticket));
+        ServiceTicket saved = serviceTicketRepository.saveAndFlush(ticket);
+        collaborationService.audit(saved, saved.getRequester(), TicketActivityType.CANCELLED, "Ticket cancelled by requester");
+        return toDetails(saved);
     }
 
     private ServiceTicket findOwnedTicket(

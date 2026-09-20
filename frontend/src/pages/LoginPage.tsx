@@ -82,9 +82,9 @@ export function LoginPage() {
     <AuthShell>
       <div className="auth-card">
         <header className="auth-card__header">
-          <span className="auth-card__kicker">Welcome back</span>
-          <h2>Sign in to your workspace</h2>
-          <p>Enter your account details to continue to HelpHub.</p>
+          <span className="auth-card__kicker">Secure account access</span>
+            <h2>Welcome to HelpHub</h2>
+            <p>Sign in to continue to your personalized workspace.</p>
         </header>
 
         {serverError && (

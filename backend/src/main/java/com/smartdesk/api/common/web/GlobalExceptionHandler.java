@@ -4,6 +4,7 @@ import com.smartdesk.api.identity.service.AccountUnavailableException;
 import com.smartdesk.api.identity.service.AdminActionConflictException;
 import com.smartdesk.api.identity.service.EmailAlreadyRegisteredException;
 import com.smartdesk.api.identity.service.InvalidCredentialsException;
+import com.smartdesk.api.identity.service.NotificationNotFoundException;
 import com.smartdesk.api.ticket.service.TicketRequesterNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -22,6 +23,22 @@ import java.util.Map;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(NotificationNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleMissingNotification(
+            NotificationNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        return ResponseEntity.status(status).body(new ApiErrorResponse(
+                Instant.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        ));
+    }
 
     @ExceptionHandler(AdminActionConflictException.class)
     public ResponseEntity<ApiErrorResponse> handleAdminConflict(

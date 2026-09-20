@@ -1871,4 +1871,65 @@ a {
     width: 100%;
   }
 }
+
+.notification-center { position: relative; }
+
+.notification-count {
+  position: absolute; top: -5px; right: -5px; display: grid; min-width: 18px;
+  height: 18px; padding: 0 5px; place-items: center; color: #fff;
+  font-size: .58rem; font-weight: 800; background: #e64d69;
+  border: 2px solid #fff; border-radius: 999px;
+}
+
+.notification-menu {
+  position: absolute; z-index: 30; top: calc(100% + 12px); right: 0;
+  width: min(360px, calc(100vw - 32px)); overflow: hidden; background: #fff;
+  border: 1px solid var(--border); border-radius: 16px;
+  box-shadow: 0 22px 55px rgb(26 34 57 / 18%);
+}
+
+.notification-menu header {
+  display: flex; padding: 16px 18px; align-items: center;
+  justify-content: space-between; border-bottom: 1px solid #edf0f5;
+}
+
+.notification-menu header strong { font-size: .86rem; }
+.notification-menu header span,
+.notification-menu button small { color: #939bad; font-size: .65rem; }
+
+.notification-menu button {
+  display: grid; width: 100%; padding: 13px 18px; gap: 5px; color: #545d70;
+  text-align: left; background: #fff; border: 0; border-bottom: 1px solid #f0f2f6;
+}
+
+.notification-menu button:hover,
+.notification-menu .notification-item--unread { background: #f6f6ff; }
+.notification-menu .notification-item--unread span { color: #30394d; font-weight: 700; }
+.notification-menu__empty { margin: 0; padding: 25px 18px; color: #8f97a8; font-size: .76rem; text-align: center; }
+
+.analytics-panel {
+  display: grid; margin-top: 19px; padding: 24px;
+  grid-template-columns: minmax(210px, .7fr) minmax(320px, 1.3fr);
+  align-items: center; gap: 36px; background: #fff;
+  border: 1px solid var(--border); border-radius: 17px;
+  box-shadow: 0 8px 26px rgb(31 41 67 / 4%);
+}
+
+.analytics-panel h2 { margin: 7px 0 0; color: #293144; font-size: 1.05rem; }
+.analytics-panel p { margin: 7px 0 0; color: #929aaa; font-size: .75rem; }
+.category-bars { display: grid; gap: 10px; }
+.category-bar {
+  display: grid; grid-template-columns: 72px minmax(100px, 1fr) 24px;
+  align-items: center; gap: 10px; color: #6c7485; font-size: .68rem;
+}
+.category-bar > div { height: 7px; overflow: hidden; background: #eef0f6; border-radius: 99px; }
+.category-bar i {
+  display: block; height: 100%; min-width: 4px;
+  background: linear-gradient(90deg, var(--accent), #8d79f2); border-radius: inherit;
+}
+.category-bar strong { color: #3f485a; text-align: right; }
+
+@media (max-width: 760px) {
+  .analytics-panel { grid-template-columns: 1fr; gap: 22px; }
+  .notification-menu { right: -58px; }
 }

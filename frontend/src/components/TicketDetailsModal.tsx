@@ -6,8 +6,11 @@ import {
   FileText,
   Layers3,
   LoaderCircle,
+  MessageSquare,
   Pencil,
   Save,
+  Send,
+  ShieldCheck,
   Sparkles,
   Tag,
   TicketCheck,
@@ -15,20 +18,22 @@ import {
   X,
 } from 'lucide-react'
 import './TicketDetailsModal.css'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import { ApiRequestError } from '../api/apiClient'
 import {
   cancelTicket,
+  addTicketComment,
   changeTicketStatus,
   claimTicket,
   getTicket,
   getStaffTicket,
+  getTicketActivity,
   updateTicket,
 } from '../api/ticketApi'
-import type { TicketDetails } from '../types/ticket'
+import type { TicketActivity, TicketDetails } from '../types/ticket'
 
 const updateSchema = z.object({
   title: z
@@ -91,6 +96,10 @@ export function TicketDetailsModal({
   const [confirmingCancel, setConfirmingCancel] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [staffActionRunning, setStaffActionRunning] = useState(false)
+  const [activity, setActivity] = useState<TicketActivity[]>([])
+  const [commentMessage, setCommentMessage] = useState('')
+  const [internalNote, setInternalNote] = useState(false)
+  const [commentSubmitting, setCommentSubmitting] = useState(false)
 
   const {
     register,
@@ -121,6 +130,10 @@ export function TicketDetailsModal({
           priority: loadedTicket.priority,
         })
       })
+
+    getTicketActivity(accessToken, ticketId)
+      .then((items) => { if (active) setActivity(items) })
+      .catch(() => { if (active) setActionError('The ticket timeline could not be loaded.') })
       .catch(() => {
         if (active) {
           setLoadError('The ticket details could not be loaded.')
@@ -162,6 +175,7 @@ export function TicketDetailsModal({
       setTicket(updatedTicket)
       setEditing(false)
       onChanged(updatedTicket)
+      setActivity(await getTicketActivity(accessToken, ticketId))
     } catch (error) {
       if (error instanceof ApiRequestError) {
         setActionError(error.message)
@@ -196,6 +210,7 @@ export function TicketDetailsModal({
       setTicket(cancelledTicket)
       setConfirmingCancel(false)
       onChanged(cancelledTicket)
+      setActivity(await getTicketActivity(accessToken, ticketId))
     } catch (error) {
       setActionError(
         error instanceof ApiRequestError
@@ -223,6 +238,7 @@ export function TicketDetailsModal({
           : await changeTicketStatus(accessToken, ticketId, action)
       setTicket(changedTicket)
       onChanged(changedTicket)
+      setActivity(await getTicketActivity(accessToken, ticketId))
     } catch (error) {
       setActionError(
         error instanceof ApiRequestError
@@ -251,6 +267,23 @@ export function TicketDetailsModal({
     }
     return null
   })()
+
+  const submitComment = async (event: FormEvent) => {
+    event.preventDefault()
+    const message = commentMessage.trim()
+    if (!message) return
+    setCommentSubmitting(true)
+    setActionError(null)
+    try {
+      const added = await addTicketComment(accessToken, ticketId, message, isStaff && internalNote)
+      setActivity((current) => [...current, added])
+      setCommentMessage('')
+    } catch (error) {
+      setActionError(error instanceof ApiRequestError ? error.message : 'The message could not be added.')
+    } finally {
+      setCommentSubmitting(false)
+    }
+  }
 
   return (
     <div
@@ -374,6 +407,30 @@ export function TicketDetailsModal({
                 <h4>Description</h4>
               </div>
               <p>{ticket.description}</p>
+            </section>
+
+            <section className="activity-panel">
+              <div className="activity-panel__heading">
+                <div><MessageSquare size={18} /><h4>Activity & comments</h4></div>
+                <span>{activity.length}</span>
+              </div>
+              <div className="activity-timeline">
+                {activity.length === 0 && <p className="activity-empty">No activity recorded yet.</p>}
+                {activity.map((item) => (
+                  <article className={`activity-entry ${item.internalNote ? 'activity-entry--internal' : ''}`} key={item.id}>
+                    <span className="activity-entry__dot" />
+                    <div><strong>{item.actorName}</strong><small>{formatLabel(item.type)} · {formatDate(item.createdAt)}</small><p>{item.message}</p></div>
+                    {item.internalNote && <span className="internal-note-badge"><ShieldCheck size={12} /> Internal</span>}
+                  </article>
+                ))}
+              </div>
+              <form className="comment-form" onSubmit={submitComment}>
+                <textarea value={commentMessage} onChange={(event) => setCommentMessage(event.target.value)} maxLength={2000} placeholder={isStaff ? 'Reply to the requester or add an internal note…' : 'Add a comment for the support team…'} aria-label="Ticket comment" />
+                <div>
+                  {isStaff && <label className="internal-note-toggle"><input type="checkbox" checked={internalNote} onChange={(event) => setInternalNote(event.target.checked)} /> Internal technician note</label>}
+                  <button className="primary-button primary-button--compact" type="submit" disabled={commentSubmitting || !commentMessage.trim()}>{commentSubmitting ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />} Send</button>
+                </div>
+              </form>
             </section>
 
             {confirmingCancel && (

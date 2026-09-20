@@ -8,6 +8,9 @@ HelpHub is a portfolio-ready IT service desk application with secure employee an
 - Role-based authorization for `EMPLOYEE`, `TECHNICIAN`, and `ADMINISTRATOR`
 - Three purpose-built workspaces: requester, technician operations, and administration
 - Ticket creation, search, detail, update, cancellation, assignment, and status workflow
+- Shared ticket timeline with requester comments, staff-only internal notes, and automatic audit events
+- In-app notifications for assignment, status, and conversation updates
+- Live category analytics in every role-specific workspace
 - Responsive React dashboard with accessible forms and clear loading/error states
 - PostgreSQL schema managed by versioned Flyway migrations
 - Spring Boot integration tests and automated frontend lint/build checks
@@ -133,6 +136,9 @@ Invalid transitions return HTTP `409 Conflict`. Requesters can only access their
 | `GET`, `POST` | `/api/v1/tickets` | Employee-owned tickets |
 | `GET`, `PATCH` | `/api/v1/tickets/{id}` | Ticket owner |
 | `POST` | `/api/v1/tickets/{id}/cancel` | Ticket owner |
+| `GET`, `POST` | `/api/v1/tickets/{id}/activity` | Ticket owner or staff; internal notes are staff-only |
+| `GET` | `/api/v1/notifications` | Authenticated user |
+| `PATCH` | `/api/v1/notifications/{id}/read` | Notification owner |
 | `GET` | `/api/v1/staff/tickets` | Technician/Admin |
 | `POST` | `/api/v1/staff/tickets/{id}/claim` | Technician/Admin |
 | `PATCH` | `/api/v1/staff/tickets/{id}/status` | Assigned Technician/Admin |

@@ -110,6 +110,58 @@ paths:
           description: Ticket cancelled
         '409':
           description: Invalid lifecycle operation
+  /api/v1/tickets/{ticketId}/activity:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      summary: Read the visible ticket activity timeline
+      description: Owners see public activity. Technicians and administrators also see internal notes.
+      responses:
+        '200':
+          description: Ordered ticket activity
+    post:
+      summary: Add a ticket comment or internal staff note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+                internalNote:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: Activity added
+        '409':
+          description: An employee attempted to add an internal note
+  /api/v1/notifications:
+    get:
+      summary: List notifications for the authenticated user
+      responses:
+        '200':
+          description: Notifications newest first
+  /api/v1/notifications/{notificationId}/read:
+    parameters:
+      - name: notificationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      summary: Mark an owned notification as read
+      responses:
+        '200':
+          description: Notification updated
+        '404':
+          description: Notification not found for this user
   /api/v1/staff/tickets:
     get:
       summary: List the team work queue

@@ -1,6 +1,7 @@
 import type {
   CreateTicketRequest,
   TicketDetails,
+  TicketActivity,
   TicketResponse,
   TicketSummary,
   UpdateTicketRequest,
@@ -18,6 +19,20 @@ export function getTickets(
 ): Promise<TicketSummary[]> {
   return apiRequest<TicketSummary[]>('/api/v1/tickets', {
     headers: authorizationHeader(accessToken),
+  })
+}
+
+export function getTicketActivity(accessToken: string, ticketId: string): Promise<TicketActivity[]> {
+  return apiRequest<TicketActivity[]>(`/api/v1/tickets/${ticketId}/activity`, {
+    headers: authorizationHeader(accessToken),
+  })
+}
+
+export function addTicketComment(accessToken: string, ticketId: string, message: string, internalNote: boolean): Promise<TicketActivity> {
+  return apiRequest<TicketActivity>(`/api/v1/tickets/${ticketId}/activity`, {
+    method: 'POST',
+    headers: { ...authorizationHeader(accessToken), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, internalNote }),
   })
 }
 

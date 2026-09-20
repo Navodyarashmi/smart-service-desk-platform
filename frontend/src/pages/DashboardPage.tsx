@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  Bell,
   CheckCircle2,
   ChevronRight,
   Clock3,
@@ -22,6 +23,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { getAdminUsers, updateAdminUser } from '../api/adminApi'
+import { getNotifications, markNotificationRead } from '../api/notificationApi'
 import { ApiRequestError } from '../api/apiClient'
 import {
   clearAccessToken,
@@ -38,6 +40,7 @@ import type {
   TicketResponse,
   TicketStatus,
   TicketSummary,
+  NotificationItem,
 } from '../types/ticket'
 
 type Workspace = 'employee' | 'technician' | 'administrator'
@@ -76,6 +79,8 @@ export function DashboardPage() {
   const [user, setUser] = useState<CurrentUser | null>(null)
   const [tickets, setTickets] = useState<TicketSummary[]>([])
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([])
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [activeView, setActiveView] = useState<View>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
@@ -103,13 +108,15 @@ export function DashboardPage() {
           workspace === 'administrator'
             ? getAdminUsers(accessToken)
             : Promise.resolve([])
-        const [loadedTickets, loadedUsers] = await Promise.all([
+        const [loadedTickets, loadedUsers, loadedNotifications] = await Promise.all([
           ticketRequest,
           userRequest,
+          getNotifications(accessToken),
         ])
         setUser(currentUser)
         setTickets(loadedTickets)
         setAdminUsers(loadedUsers)
+        setNotifications(loadedNotifications)
       })
       .catch((error: unknown) => {
         if (error instanceof ApiRequestError && error.status === 401) {
@@ -201,6 +208,26 @@ export function DashboardPage() {
         { label: 'Resolved', value: countStatuses('RESOLVED', 'CLOSED'), detail: 'Successfully completed', icon: CheckCircle2, tone: 'green' },
       ]
 
+  const categoryCounts = ['HARDWARE', 'SOFTWARE', 'NETWORK', 'ACCESS', 'OTHER'].map((category) => ({
+    category,
+    count: tickets.filter((ticket) => ticket.category === category).length,
+  }))
+  const maxCategoryCount = Math.max(1, ...categoryCounts.map((item) => item.count))
+  const unreadNotifications = notifications.filter((item) => !item.read).length
+
+  const openNotification = async (notification: NotificationItem) => {
+    if (!notification.read) {
+      try {
+        const changed = await markNotificationRead(accessToken, notification.id)
+        setNotifications((current) => current.map((item) => item.id === changed.id ? changed : item))
+      } catch {
+        setActionError('The notification could not be marked as read.')
+      }
+    }
+    if (notification.ticketId) setSelectedTicketId(notification.ticketId)
+    setNotificationsOpen(false)
+  }
+
   const signOut = () => {
     clearAccessToken()
     navigate('/login', { replace: true })
@@ -285,11 +312,32 @@ export function DashboardPage() {
             <Search size={19} />
             <input type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search tickets" aria-label="Search tickets" />
           </div>
-          <button className="user-menu user-menu--button" type="button" onClick={() => setProfileOpen(true)}>
-            <span className="user-avatar">{initials}</span>
-            <span className="user-menu__details"><strong>{user.fullName}</strong><small>{user.roles.map(formatLabel).join(' · ')}</small></span>
-            <ChevronRight size={18} />
-          </button>
+          <div className="topbar__actions">
+            <div className="notification-center">
+              <button className="icon-button" type="button" onClick={() => setNotificationsOpen((current) => !current)} aria-label="Notifications">
+                <Bell size={19} />
+                {unreadNotifications > 0 && <span className="notification-count">{unreadNotifications}</span>}
+              </button>
+              {notificationsOpen && (
+                <div className="notification-menu">
+                  <header><strong>Notifications</strong><span>{unreadNotifications} unread</span></header>
+                  <div>
+                    {notifications.length === 0 && <p className="notification-menu__empty">You are all caught up.</p>}
+                    {notifications.slice(0, 8).map((notification) => (
+                      <button className={notification.read ? '' : 'notification-item--unread'} type="button" key={notification.id} onClick={() => openNotification(notification)}>
+                        <span>{notification.message}</span><small>{formatDate(notification.createdAt)}</small>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <button className="user-menu user-menu--button" type="button" onClick={() => setProfileOpen(true)}>
+              <span className="user-avatar">{initials}</span>
+              <span className="user-menu__details"><strong>{user.fullName}</strong><small>{user.roles.map(formatLabel).join(' · ')}</small></span>
+              <ChevronRight size={18} />
+            </button>
+          </div>
         </header>
 
         <div className="dashboard-content">
@@ -305,7 +353,7 @@ export function DashboardPage() {
           </section>
 
           {activeView === 'overview' && (
-            <section className="stats-grid" aria-label="Workspace statistics">
+            <><section className="stats-grid" aria-label="Workspace statistics">
               {statistics.map(({ label, value, detail, icon: Icon, tone }) => (
                 <article className="stat-card" key={label}>
                   <span className={`stat-card__icon stat-card__icon--${tone}`}><Icon size={21} /></span>
@@ -314,6 +362,16 @@ export function DashboardPage() {
                 </article>
               ))}
             </section>
+            <section className="analytics-panel" aria-label="Ticket categories">
+              <div><span className="dashboard-eyebrow">Live distribution</span><h2>Requests by category</h2><p>Current workload across service areas.</p></div>
+              <div className="category-bars">
+                {categoryCounts.map((item) => (
+                  <div className="category-bar" key={item.category}>
+                    <span>{formatLabel(item.category)}</span><div><i style={{ width: `${(item.count / maxCategoryCount) * 100}%` }} /></div><strong>{item.count}</strong>
+                  </div>
+                ))}
+              </div>
+            </section></>
           )}
 
           {actionError && <div className="form-alert workspace-alert" role="alert">{actionError}</div>}

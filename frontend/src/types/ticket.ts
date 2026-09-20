@@ -66,3 +66,30 @@ export interface TicketDetails {
   updatedAt: string
   resolvedAt: string | null
 }
+
+export type TicketActivityType =
+  | 'CREATED'
+  | 'COMMENT'
+  | 'INTERNAL_NOTE'
+  | 'ASSIGNED'
+  | 'STATUS_CHANGED'
+  | 'UPDATED'
+  | 'CANCELLED'
+
+export interface TicketActivity {
+  id: string
+  type: TicketActivityType
+  message: string
+  internalNote: boolean
+  actorId: string | null
+  actorName: string
+  createdAt: string
+}
+
+export interface NotificationItem {
+  id: string
+  ticketId: string | null
+  message: string
+  read: boolean
+  createdAt: string
+}

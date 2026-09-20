@@ -7,13 +7,13 @@ HelpHub uses a conventional three-tier architecture:
 1. The React single-page application renders employee and staff workspaces.
 2. Nginx serves static assets and proxies `/api` to Spring Boot in containers; Vite provides the equivalent proxy during development.
 3. Spring Boot validates JWTs, enforces ownership and role rules, applies business transitions, and persists through JPA.
-4. PostgreSQL stores users, roles, assignments, and tickets; Flyway owns schema evolution.
+4. PostgreSQL stores users, roles, assignments, tickets, activity history, and notifications; Flyway owns schema evolution.
 
 ## Backend boundaries
 
-- `identity`: registration, authentication, user roles, and current-user data.
+- `identity`: registration, authentication, user roles, current-user data, and user notifications.
 - `security`: HMAC JWT encoding/decoding and conversion of the `roles` claim into Spring authorities.
-- `ticket`: ticket aggregate, requester operations, staff operations, repositories, and REST representations.
+- `ticket`: ticket aggregate, requester operations, staff operations, collaboration timeline, audit events, repositories, and REST representations.
 - `common.web`: consistent validation and application error responses.
 
 Controllers translate HTTP messages, services enforce business rules inside transactions, entities protect their own invariants, and repositories isolate persistence.
@@ -26,6 +26,8 @@ Controllers translate HTTP messages, services enforce business rules inside tran
 - Staff endpoints use method authorization for `TECHNICIAN` and `ADMINISTRATOR`.
 - Administration endpoints require `ADMINISTRATOR` and protect administrators from removing or locking their own access.
 - A staff member must claim a ticket before changing its status.
+- Internal notes are returned only to technicians and administrators; requester comments remain visible to both sides.
+- Notification lookups are always scoped to the authenticated recipient.
 - Secrets are supplied by environment variables and never committed.
 
 ## Operational design

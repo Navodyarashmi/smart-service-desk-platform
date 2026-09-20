@@ -5,6 +5,7 @@ import com.smartdesk.api.identity.model.UserAccount;
 import com.smartdesk.api.identity.repository.UserAccountRepository;
 import com.smartdesk.api.identity.repository.UserRoleAssignmentRepository;
 import com.smartdesk.api.ticket.model.ServiceTicket;
+import com.smartdesk.api.ticket.model.TicketActivityType;
 import com.smartdesk.api.ticket.model.TicketStatus;
 import com.smartdesk.api.ticket.repository.ServiceTicketRepository;
 import org.springframework.stereotype.Service;
@@ -23,15 +24,18 @@ public class StaffTicketService {
     private final ServiceTicketRepository ticketRepository;
     private final UserAccountRepository userRepository;
     private final UserRoleAssignmentRepository roleAssignmentRepository;
+    private final TicketCollaborationService collaborationService;
 
     public StaffTicketService(
             ServiceTicketRepository ticketRepository,
             UserAccountRepository userRepository,
-            UserRoleAssignmentRepository roleAssignmentRepository
+            UserRoleAssignmentRepository roleAssignmentRepository,
+            TicketCollaborationService collaborationService
     ) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
         this.roleAssignmentRepository = roleAssignmentRepository;
+        this.collaborationService = collaborationService;
     }
 
     @Transactional(readOnly = true)
@@ -72,7 +76,9 @@ public class StaffTicketService {
         }
 
         ticket.assignTo(technician);
-        return toDetails(ticketRepository.saveAndFlush(ticket));
+        ServiceTicket saved = ticketRepository.saveAndFlush(ticket);
+        collaborationService.audit(saved, technician, TicketActivityType.ASSIGNED, "Ticket assigned to " + technician.getFullName());
+        return toDetails(saved);
     }
 
     @Transactional
@@ -114,7 +120,10 @@ public class StaffTicketService {
             );
         }
 
-        return toDetails(ticketRepository.saveAndFlush(ticket));
+        ServiceTicket saved = ticketRepository.saveAndFlush(ticket);
+        UserAccount actor = userRepository.getReferenceById(staffUserId);
+        collaborationService.audit(saved, actor, TicketActivityType.STATUS_CHANGED, "Status changed from " + currentStatus + " to " + requestedStatus);
+        return toDetails(saved);
     }
 
     private ServiceTicket findTicket(UUID ticketId) {

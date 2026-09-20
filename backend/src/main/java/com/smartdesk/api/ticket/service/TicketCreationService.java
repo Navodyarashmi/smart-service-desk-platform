@@ -3,6 +3,7 @@ package com.smartdesk.api.ticket.service;
 import com.smartdesk.api.identity.model.UserAccount;
 import com.smartdesk.api.identity.repository.UserAccountRepository;
 import com.smartdesk.api.ticket.model.ServiceTicket;
+import com.smartdesk.api.ticket.model.TicketActivityType;
 import com.smartdesk.api.ticket.repository.ServiceTicketRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,13 +20,16 @@ public class TicketCreationService {
 
     private final ServiceTicketRepository serviceTicketRepository;
     private final UserAccountRepository userAccountRepository;
+    private final TicketCollaborationService collaborationService;
 
     public TicketCreationService(
             ServiceTicketRepository serviceTicketRepository,
-            UserAccountRepository userAccountRepository
+            UserAccountRepository userAccountRepository,
+            TicketCollaborationService collaborationService
     ) {
         this.serviceTicketRepository = serviceTicketRepository;
         this.userAccountRepository = userAccountRepository;
+        this.collaborationService = collaborationService;
     }
 
     @Transactional
@@ -55,6 +59,12 @@ public class TicketCreationService {
 
         ServiceTicket savedTicket =
                 serviceTicketRepository.saveAndFlush(ticket);
+        collaborationService.audit(
+                savedTicket,
+                requester,
+                TicketActivityType.CREATED,
+                "Ticket created"
+        );
 
         return new CreatedTicket(
                 savedTicket.getId(),
