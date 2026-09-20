@@ -79,23 +79,26 @@ public class DemoDataInitializer implements ApplicationRunner {
             String fullName,
             RoleCode roleCode
     ) {
-        if (userRepository.existsByEmailIgnoreCase(email)) {
-            return;
-        }
-
         Role role = roleRepository.findByCode(roleCode)
                 .orElseThrow(() -> new IllegalStateException(
                         "Required role is missing: " + roleCode
                 ));
-        UserAccount user = userRepository.saveAndFlush(
-                UserAccount.register(
-                        email,
-                        passwordEncoder.encode(password),
-                        fullName
-                )
-        );
-        assignmentRepository.save(
-                UserRoleAssignment.assign(user, role, null)
-        );
+        UserAccount user = userRepository.findByEmailIgnoreCase(email)
+                .orElseGet(() -> userRepository.saveAndFlush(
+                        UserAccount.register(
+                                email,
+                                passwordEncoder.encode(password),
+                                fullName
+                        )
+                ));
+
+        if (!assignmentRepository.existsByUser_IdAndRole_Code(
+                user.getId(),
+                roleCode
+        )) {
+            assignmentRepository.save(
+                    UserRoleAssignment.assign(user, role, null)
+            );
+        }
     }
 }

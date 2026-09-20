@@ -43,3 +43,19 @@ export interface ApiErrorResponse {
   path: string
   fieldErrors: Record<string, string>
 }
+
+export interface AdminUser {
+  id: string
+  email: string
+  fullName: string
+  roles: Role[]
+  enabled: boolean
+  accountLocked: boolean
+  createdAt: string
+}
+
+export interface AdminUserUpdate {
+  role: Role
+  enabled: boolean
+  accountLocked: boolean
+}

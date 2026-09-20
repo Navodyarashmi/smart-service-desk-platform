@@ -2,22 +2,26 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronRight,
-  CircleUserRound,
   Clock3,
   Headphones,
   Inbox,
   LayoutDashboard,
   ListTodo,
   LoaderCircle,
+  LockKeyhole,
   LogOut,
   Plus,
   Search,
+  ShieldCheck,
   TicketCheck,
+  UserCog,
+  UsersRound,
   Wrench,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import { getAdminUsers, updateAdminUser } from '../api/adminApi'
 import { ApiRequestError } from '../api/apiClient'
 import {
   clearAccessToken,
@@ -26,14 +30,18 @@ import {
 } from '../api/authApi'
 import { getStaffTickets, getTickets } from '../api/ticketApi'
 import { CreateTicketModal } from '../components/CreateTicketModal'
+import { ProfileModal } from '../components/ProfileModal'
 import { TicketDetailsModal } from '../components/TicketDetailsModal'
-import type { CurrentUser } from '../types/auth'
+import type { AdminUser, CurrentUser, Role } from '../types/auth'
 import type {
   TicketDetails,
   TicketResponse,
   TicketStatus,
   TicketSummary,
 } from '../types/ticket'
+
+type Workspace = 'employee' | 'technician' | 'administrator'
+type View = 'overview' | 'tickets' | 'users'
 
 function formatLabel(value: string): string {
   return value
@@ -42,7 +50,7 @@ function formatLabel(value: string): string {
     .replace(/\b\w/g, (character) => character.toUpperCase())
 }
 
-function formatTicketDate(value: string): string {
+function formatDate(value: string): string {
   return new Intl.DateTimeFormat('en', {
     month: 'short',
     day: 'numeric',
@@ -50,36 +58,58 @@ function formatTicketDate(value: string): string {
   }).format(new Date(value))
 }
 
+function resolveWorkspace(user: CurrentUser): Workspace {
+  if (user.roles.includes('ADMINISTRATOR')) return 'administrator'
+  if (user.roles.includes('TECHNICIAN')) return 'technician'
+  return 'employee'
+}
+
+function primaryRole(roles: Role[]): Role {
+  if (roles.includes('ADMINISTRATOR')) return 'ADMINISTRATOR'
+  if (roles.includes('TECHNICIAN')) return 'TECHNICIAN'
+  return 'EMPLOYEE'
+}
+
 export function DashboardPage() {
   const navigate = useNavigate()
-
+  const [accessToken] = useState(() => getAccessToken() ?? '')
   const [user, setUser] = useState<CurrentUser | null>(null)
   const [tickets, setTickets] = useState<TicketSummary[]>([])
-  const [accessToken] = useState(() => getAccessToken() ?? '')
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([])
+  const [activeView, setActiveView] = useState<View>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [ticketModalOpen, setTicketModalOpen] = useState(false)
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(
-  null,
-)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!accessToken) {
-  navigate('/login', { replace: true })
-  return
-}
+      navigate('/login', { replace: true })
+      return
+    }
 
     getCurrentUser(accessToken)
       .then(async (currentUser) => {
-        const isStaff = currentUser.roles.some(
-          (role) => role === 'TECHNICIAN' || role === 'ADMINISTRATOR',
-        )
-        const currentTickets = isStaff
-          ? await getStaffTickets(accessToken)
-          : await getTickets(accessToken)
+        const workspace = resolveWorkspace(currentUser)
+        const ticketRequest =
+          workspace === 'employee'
+            ? getTickets(accessToken)
+            : getStaffTickets(accessToken)
+        const userRequest =
+          workspace === 'administrator'
+            ? getAdminUsers(accessToken)
+            : Promise.resolve([])
+        const [loadedTickets, loadedUsers] = await Promise.all([
+          ticketRequest,
+          userRequest,
+        ])
         setUser(currentUser)
-        setTickets(currentTickets)
+        setTickets(loadedTickets)
+        setAdminUsers(loadedUsers)
       })
       .catch((error: unknown) => {
         if (error instanceof ApiRequestError && error.status === 401) {
@@ -87,21 +117,14 @@ export function DashboardPage() {
           navigate('/login', { replace: true })
           return
         }
-
-        setLoadError(
-          'We could not load your workspace. Check the backend and try again.',
-        )
+        setLoadError('We could not load your workspace. Check the backend and try again.')
       })
       .finally(() => setLoading(false))
   }, [accessToken, navigate])
 
   const filteredTickets = useMemo(() => {
-    const normalizedSearch = searchQuery.trim().toLowerCase()
-
-    if (!normalizedSearch) {
-      return tickets
-    }
-
+    const query = searchQuery.trim().toLowerCase()
+    if (!query) return tickets
     return tickets.filter((ticket) =>
       [
         ticket.referenceCode,
@@ -109,90 +132,14 @@ export function DashboardPage() {
         ticket.category,
         ticket.priority,
         ticket.status,
-      ].some((value) => value.toLowerCase().includes(normalizedSearch)),
+      ].some((value) => value.toLowerCase().includes(query)),
     )
   }, [searchQuery, tickets])
-
-  const ticketCounts = useMemo(() => {
-    const countStatuses = (...statuses: TicketStatus[]) =>
-      tickets.filter((ticket) => statuses.includes(ticket.status)).length
-
-    return {
-      open: countStatuses('OPEN', 'ASSIGNED'),
-      inProgress: countStatuses('IN_PROGRESS'),
-      resolved: countStatuses('RESOLVED', 'CLOSED'),
-    }
-  }, [tickets])
-
-  const statistics = [
-    {
-      label: 'Open tickets',
-      value: String(ticketCounts.open).padStart(2, '0'),
-      detail: `${tickets.length} total requests`,
-      icon: TicketCheck,
-      tone: 'blue',
-    },
-    {
-      label: 'In progress',
-      value: String(ticketCounts.inProgress).padStart(2, '0'),
-      detail: 'Currently being handled',
-      icon: Clock3,
-      tone: 'violet',
-    },
-    {
-      label: 'Resolved',
-      value: String(ticketCounts.resolved).padStart(2, '0'),
-      detail: 'Successfully completed',
-      icon: CheckCircle2,
-      tone: 'green',
-    },
-  ]
-
-  const signOut = () => {
-    clearAccessToken()
-    navigate('/login', { replace: true })
-  }
-
-  const handleTicketCreated = (ticket: TicketResponse) => {
-    const summary: TicketSummary = {
-      id: ticket.id,
-      referenceCode: ticket.referenceCode,
-      title: ticket.title,
-      category: ticket.category,
-      priority: ticket.priority,
-      status: ticket.status,
-      createdAt: ticket.createdAt,
-      updatedAt: ticket.createdAt,
-    }
-
-    setTickets((currentTickets) => [summary, ...currentTickets])
-  }
-
-  const handleTicketChanged = (ticket: TicketDetails) => {
-    setTickets((currentTickets) =>
-      currentTickets.map((currentTicket) =>
-        currentTicket.id === ticket.id
-          ? {
-              id: ticket.id,
-              referenceCode: ticket.referenceCode,
-              title: ticket.title,
-              category: ticket.category,
-              priority: ticket.priority,
-              status: ticket.status,
-              createdAt: ticket.createdAt,
-              updatedAt: ticket.updatedAt,
-            }
-          : currentTicket,
-      ),
-    )
-  }
 
   if (loading) {
     return (
       <main className="loading-screen">
-        <span className="brand__mark">
-          <Headphones size={24} />
-        </span>
+        <span className="brand__mark"><Headphones size={24} /></span>
         <LoaderCircle className="spin" size={24} />
         <p>Preparing your workspace…</p>
       </main>
@@ -202,254 +149,250 @@ export function DashboardPage() {
   if (loadError || !user) {
     return (
       <main className="loading-screen">
-        <span className="error-state__icon">
-          <AlertTriangle size={24} />
-        </span>
+        <span className="error-state__icon"><AlertTriangle size={24} /></span>
         <strong>Workspace unavailable</strong>
         <p>{loadError ?? 'Your workspace could not be loaded.'}</p>
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={() => window.location.reload()}
-        >
+        <button className="secondary-button" type="button" onClick={() => window.location.reload()}>
           Try again
         </button>
       </main>
     )
   }
 
-  const firstName = user.fullName.split(' ')[0]
-  const isStaff = user.roles.some(
-    (role) => role === 'TECHNICIAN' || role === 'ADMINISTRATOR',
-  )
+  const workspace = resolveWorkspace(user)
+  const isStaff = workspace !== 'employee'
   const initials = user.fullName
     .split(' ')
     .map((part) => part[0])
     .slice(0, 2)
     .join('')
     .toUpperCase()
+  const firstName = user.fullName.split(' ')[0]
+  const countStatuses = (...statuses: TicketStatus[]) =>
+    tickets.filter((ticket) => statuses.includes(ticket.status)).length
+
+  const workspaceCopy = {
+    employee: {
+      eyebrow: 'Employee workspace',
+      title: `Good to see you, ${firstName}.`,
+      subtitle: 'Create requests and follow every update from one place.',
+    },
+    technician: {
+      eyebrow: 'Technician operations',
+      title: `Ready for the queue, ${firstName}?`,
+      subtitle: 'Claim incoming work and move each request toward resolution.',
+    },
+    administrator: {
+      eyebrow: 'Administration control center',
+      title: `Welcome back, ${firstName}.`,
+      subtitle: 'Manage access, monitor service health, and oversee every request.',
+    },
+  }[workspace]
+
+  const statistics = workspace === 'administrator'
+    ? [
+        { label: 'Total users', value: adminUsers.length, detail: 'Registered accounts', icon: UsersRound, tone: 'blue' },
+        { label: 'Active users', value: adminUsers.filter((item) => item.enabled && !item.accountLocked).length, detail: 'Can currently sign in', icon: ShieldCheck, tone: 'green' },
+        { label: 'Locked users', value: adminUsers.filter((item) => item.accountLocked).length, detail: 'Require administrator review', icon: LockKeyhole, tone: 'violet' },
+      ]
+    : [
+        { label: workspace === 'employee' ? 'Open tickets' : 'Unassigned', value: workspace === 'employee' ? countStatuses('OPEN', 'ASSIGNED') : tickets.filter((ticket) => ticket.status === 'OPEN').length, detail: `${tickets.length} total requests`, icon: TicketCheck, tone: 'blue' },
+        { label: 'In progress', value: countStatuses('IN_PROGRESS'), detail: 'Currently being handled', icon: Clock3, tone: 'violet' },
+        { label: 'Resolved', value: countStatuses('RESOLVED', 'CLOSED'), detail: 'Successfully completed', icon: CheckCircle2, tone: 'green' },
+      ]
+
+  const signOut = () => {
+    clearAccessToken()
+    navigate('/login', { replace: true })
+  }
+
+  const handleTicketCreated = (ticket: TicketResponse) => {
+    setTickets((current) => [{
+      id: ticket.id,
+      referenceCode: ticket.referenceCode,
+      title: ticket.title,
+      category: ticket.category,
+      priority: ticket.priority,
+      status: ticket.status,
+      createdAt: ticket.createdAt,
+      updatedAt: ticket.createdAt,
+    }, ...current])
+  }
+
+  const handleTicketChanged = (ticket: TicketDetails) => {
+    setTickets((current) => current.map((item) =>
+      item.id === ticket.id
+        ? { ...item, title: ticket.title, category: ticket.category, priority: ticket.priority, status: ticket.status, updatedAt: ticket.updatedAt }
+        : item,
+    ))
+  }
+
+  const updateUser = async (
+    target: AdminUser,
+    update: { role?: Role; enabled?: boolean; accountLocked?: boolean },
+  ) => {
+    setUpdatingUserId(target.id)
+    setActionError(null)
+    try {
+      const changed = await updateAdminUser(accessToken, target.id, {
+        role: update.role ?? primaryRole(target.roles),
+        enabled: update.enabled ?? target.enabled,
+        accountLocked: update.accountLocked ?? target.accountLocked,
+      })
+      setAdminUsers((current) => current.map((item) => item.id === changed.id ? changed : item))
+    } catch (error) {
+      setActionError(error instanceof ApiRequestError ? error.message : 'The account could not be updated.')
+    } finally {
+      setUpdatingUserId(null)
+    }
+  }
 
   return (
-    <div className="dashboard-shell">
+    <div className={`dashboard-shell dashboard-shell--${workspace}`}>
       <aside className="sidebar">
         <div className="brand sidebar__brand">
-          <span className="brand__mark">
-            <Headphones size={22} />
-          </span>
+          <span className="brand__mark"><Headphones size={22} /></span>
           <span className="brand__name">HelpHub</span>
         </div>
 
-        <nav className="sidebar__nav" aria-label="Main navigation">
-          <a className="nav-item nav-item--active" href="#overview">
-            <LayoutDashboard size={19} />
-            Overview
-          </a>
-
-          <a className="nav-item" href="#tickets">
-            <ListTodo size={19} />
-            {isStaff ? 'Work queue' : 'My tickets'}
+        <nav className="sidebar__nav" aria-label="Workspace navigation">
+          <button className={`nav-item ${activeView === 'overview' ? 'nav-item--active' : ''}`} type="button" onClick={() => setActiveView('overview')}>
+            <LayoutDashboard size={19} /> Overview
+          </button>
+          <button className={`nav-item ${activeView === 'tickets' ? 'nav-item--active' : ''}`} type="button" onClick={() => setActiveView('tickets')}>
+            {workspace === 'technician' ? <Wrench size={19} /> : <ListTodo size={19} />}
+            {workspace === 'employee' ? 'My tickets' : workspace === 'technician' ? 'Operations queue' : 'Ticket oversight'}
             <span className="nav-item__count">{tickets.length}</span>
-          </a>
-
-          {isStaff && (
-            <a className="nav-item" href="#tickets">
-              <Wrench size={19} />
-              Operations
-            </a>
+          </button>
+          {workspace === 'administrator' && (
+            <button className={`nav-item ${activeView === 'users' ? 'nav-item--active' : ''}`} type="button" onClick={() => setActiveView('users')}>
+              <UserCog size={19} /> User management
+              <span className="nav-item__count">{adminUsers.length}</span>
+            </button>
           )}
         </nav>
 
-        <div className="sidebar__support">
-          <span className="sidebar__support-icon">
-            <Headphones size={20} />
-          </span>
-          <strong>Need urgent help?</strong>
-          <p>Contact the service desk directly.</p>
-          <a href="mailto:helpdesk@example.com">Email service desk</a>
+        <div className="sidebar__workspace-badge">
+          {workspace === 'employee' ? <TicketCheck size={20} /> : workspace === 'technician' ? <Wrench size={20} /> : <ShieldCheck size={20} />}
+          <span><small>Current workspace</small><strong>{formatLabel(workspace)}</strong></span>
         </div>
-
-        <button className="sign-out-button" type="button" onClick={signOut}>
-          <LogOut size={18} />
-          Sign out
-        </button>
+        <button className="sign-out-button" type="button" onClick={signOut}><LogOut size={18} /> Sign out</button>
       </aside>
 
-      <main className="dashboard-main" id="overview">
+      <main className="dashboard-main">
         <header className="topbar">
           <div className="topbar__search">
             <Search size={19} />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search your tickets"
-              aria-label="Search tickets"
-            />
+            <input type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search tickets" aria-label="Search tickets" />
           </div>
-
-          <div className="topbar__actions">
-            <div className="user-menu">
-              <span className="user-avatar">{initials}</span>
-
-              <span className="user-menu__details">
-                <strong>{user.fullName}</strong>
-                <small>{user.roles.map(formatLabel).join(' · ')}</small>
-              </span>
-
-              <CircleUserRound size={19} />
-            </div>
-          </div>
+          <button className="user-menu user-menu--button" type="button" onClick={() => setProfileOpen(true)}>
+            <span className="user-avatar">{initials}</span>
+            <span className="user-menu__details"><strong>{user.fullName}</strong><small>{user.roles.map(formatLabel).join(' · ')}</small></span>
+            <ChevronRight size={18} />
+          </button>
         </header>
 
         <div className="dashboard-content">
           <section className="welcome-row">
             <div>
-              <p className="dashboard-eyebrow">
-                {isStaff ? 'Service desk operations' : 'Employee workspace'}
-              </p>
-              <h1>Good to see you, {firstName}.</h1>
-              <p>
-                {isStaff
-                  ? 'Prioritize requests, claim work, and keep support moving.'
-                  : 'Track your requests and reach the right support team.'}
-              </p>
+              <p className="dashboard-eyebrow">{workspaceCopy.eyebrow}</p>
+              <h1>{workspaceCopy.title}</h1>
+              <p>{workspaceCopy.subtitle}</p>
             </div>
-
-            {!isStaff && (
-              <button
-                className="primary-button primary-button--compact"
-                type="button"
-                onClick={() => setTicketModalOpen(true)}
-              >
-                <Plus size={19} />
-                Create ticket
-              </button>
+            {workspace === 'employee' && (
+              <button className="primary-button primary-button--compact" type="button" onClick={() => setTicketModalOpen(true)}><Plus size={19} /> Create ticket</button>
             )}
           </section>
 
-          <section className="stats-grid" aria-label="Ticket statistics">
-            {statistics.map(({ label, value, detail, icon: Icon, tone }) => (
-              <article className="stat-card" key={label}>
-                <span className={`stat-card__icon stat-card__icon--${tone}`}>
-                  <Icon size={21} />
-                </span>
-                <div className="stat-card__value">{value}</div>
-                <h2>{label}</h2>
-                <p>{detail}</p>
-              </article>
-            ))}
-          </section>
+          {activeView === 'overview' && (
+            <section className="stats-grid" aria-label="Workspace statistics">
+              {statistics.map(({ label, value, detail, icon: Icon, tone }) => (
+                <article className="stat-card" key={label}>
+                  <span className={`stat-card__icon stat-card__icon--${tone}`}><Icon size={21} /></span>
+                  <div className="stat-card__value">{String(value).padStart(2, '0')}</div>
+                  <h2>{label}</h2><p>{detail}</p>
+                </article>
+              ))}
+            </section>
+          )}
 
-          <section className="ticket-panel" id="tickets">
-            <header className="ticket-panel__header">
-              <div>
-                <h2>{isStaff ? 'Team work queue' : 'Your tickets'}</h2>
-                <p>
-                  {isStaff
-                    ? 'All requests, ordered by newest activity.'
-                    : 'Live requests loaded securely from the service desk.'}
-                </p>
-              </div>
+          {actionError && <div className="form-alert workspace-alert" role="alert">{actionError}</div>}
 
-              <span className="ticket-result-count">
-                {filteredTickets.length}{' '}
-                {filteredTickets.length === 1 ? 'ticket' : 'tickets'}
-              </span>
-            </header>
-
-            {filteredTickets.length === 0 ? (
-              <div className="empty-tickets">
-                <span className="empty-tickets__icon">
-                  <Inbox size={25} />
-                </span>
-                <h3>
-                  {searchQuery
-                    ? 'No matching tickets'
-                    : 'No tickets created yet'}
-                </h3>
-                <p>
-                  {searchQuery
-                    ? 'Try another search term.'
-                    : 'Create your first request and track it here.'}
-                </p>
-
-                {!searchQuery && !isStaff && (
-                  <button
-                    className="text-button"
-                    type="button"
-                    onClick={() => setTicketModalOpen(true)}
-                  >
-                    Create your first ticket
-                    <ChevronRight size={17} />
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="ticket-table">
-                {filteredTickets.map((ticket) => (
-                  <article className="ticket-row" key={ticket.id}>
-                    <div className="ticket-row__identity">
-                      <span className="ticket-row__icon">
-                        <TicketCheck size={19} />
-                      </span>
-
-                      <div>
-                        <strong>{ticket.title}</strong>
-                        <span>
-                          {ticket.referenceCode} ·{' '}
-                          {formatLabel(ticket.category)} ·{' '}
-                          {formatTicketDate(ticket.createdAt)}
-                        </span>
-                      </div>
+          {workspace === 'administrator' && activeView === 'users' ? (
+            <section className="admin-panel">
+              <header className="ticket-panel__header">
+                <div><h2>User management</h2><p>Assign access levels and protect user accounts.</p></div>
+                <span className="ticket-result-count">{adminUsers.length} users</span>
+              </header>
+              <div className="admin-user-list">
+                {adminUsers.map((account) => (
+                  <article className="admin-user-row" key={account.id}>
+                    <span className="user-avatar">{account.fullName.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase()}</span>
+                    <div className="admin-user-row__identity"><strong>{account.fullName}</strong><span>{account.email}</span></div>
+                    <select value={primaryRole(account.roles)} disabled={account.id === user.id || updatingUserId === account.id} onChange={(event) => updateUser(account, { role: event.target.value as Role })} aria-label={`Role for ${account.fullName}`}>
+                      <option value="EMPLOYEE">Employee</option>
+                      <option value="TECHNICIAN">Technician</option>
+                      <option value="ADMINISTRATOR">Administrator</option>
+                    </select>
+                    <span className={`account-state ${account.enabled && !account.accountLocked ? 'account-state--active' : 'account-state--restricted'}`}>{account.accountLocked ? 'Locked' : account.enabled ? 'Active' : 'Disabled'}</span>
+                    <div className="admin-user-row__actions">
+                      <button type="button" disabled={account.id === user.id || updatingUserId === account.id} onClick={() => updateUser(account, { accountLocked: !account.accountLocked })}>{account.accountLocked ? 'Unlock' : 'Lock'}</button>
+                      <button type="button" disabled={account.id === user.id || updatingUserId === account.id} onClick={() => updateUser(account, { enabled: !account.enabled })}>{account.enabled ? 'Disable' : 'Enable'}</button>
                     </div>
-
-                    <span
-                      className={`priority priority--${ticket.priority.toLowerCase()}`}
-                    >
-                      {formatLabel(ticket.priority)}
-                    </span>
-
-                    <span
-                      className={`status status--${ticket.status
-                        .toLowerCase()
-                        .replaceAll('_', '-')}`}
-                    >
-                      {formatLabel(ticket.status)}
-                    </span>
-
-                    <button
-                        className="row-action"
-                        type="button"
-                        onClick={() => setSelectedTicketId(ticket.id)}
-                        aria-label={`Open ${ticket.referenceCode}`}
-                    >
-                      <ChevronRight size={19} />
-                    </button>
                   </article>
                 ))}
               </div>
-            )}
-          </section>
+            </section>
+          ) : (
+            <TicketPanel
+              tickets={filteredTickets}
+              searchQuery={searchQuery}
+              workspace={workspace}
+              onCreate={() => setTicketModalOpen(true)}
+              onOpen={setSelectedTicketId}
+            />
+          )}
         </div>
       </main>
 
-      <CreateTicketModal
-        open={ticketModalOpen}
-        accessToken={accessToken}
-        onClose={() => setTicketModalOpen(false)}
-        onCreated={handleTicketCreated}
-      />
-        {selectedTicketId && (
-        <TicketDetailsModal
-          key={selectedTicketId}
-          ticketId={selectedTicketId}
-          accessToken={accessToken}
-          onClose={() => setSelectedTicketId(null)}
-          onChanged={handleTicketChanged}
-          isStaff={isStaff}
-          currentUserId={user.id}
-        />
-      )}
+      <CreateTicketModal open={ticketModalOpen} accessToken={accessToken} onClose={() => setTicketModalOpen(false)} onCreated={handleTicketCreated} />
+      {selectedTicketId && <TicketDetailsModal key={selectedTicketId} ticketId={selectedTicketId} accessToken={accessToken} onClose={() => setSelectedTicketId(null)} onChanged={handleTicketChanged} isStaff={isStaff} currentUserId={user.id} />}
+      {profileOpen && <ProfileModal user={user} onClose={() => setProfileOpen(false)} />}
     </div>
+  )
+}
+
+function TicketPanel({ tickets, searchQuery, workspace, onCreate, onOpen }: {
+  tickets: TicketSummary[]
+  searchQuery: string
+  workspace: Workspace
+  onCreate: () => void
+  onOpen: (id: string) => void
+}) {
+  const title = workspace === 'employee' ? 'Your tickets' : workspace === 'technician' ? 'Operations queue' : 'Ticket oversight'
+  const description = workspace === 'employee' ? 'Requests visible only to your account.' : 'Organization-wide requests ordered by latest activity.'
+  return (
+    <section className="ticket-panel" id="tickets">
+      <header className="ticket-panel__header"><div><h2>{title}</h2><p>{description}</p></div><span className="ticket-result-count">{tickets.length} {tickets.length === 1 ? 'ticket' : 'tickets'}</span></header>
+      {tickets.length === 0 ? (
+        <div className="empty-tickets">
+          <span className="empty-tickets__icon"><Inbox size={25} /></span>
+          <h3>{searchQuery ? 'No matching tickets' : workspace === 'employee' ? 'No tickets created yet' : 'The queue is clear'}</h3>
+          <p>{searchQuery ? 'Try another search term.' : workspace === 'employee' ? 'Create your first request and track it here.' : 'New support requests will appear here.'}</p>
+          {!searchQuery && workspace === 'employee' && <button className="text-button" type="button" onClick={onCreate}>Create your first ticket <ChevronRight size={17} /></button>}
+        </div>
+      ) : (
+        <div className="ticket-table">
+          {tickets.map((ticket) => (
+            <article className="ticket-row" key={ticket.id}>
+              <div className="ticket-row__identity"><span className="ticket-row__icon"><TicketCheck size={19} /></span><div><strong>{ticket.title}</strong><span>{ticket.referenceCode} · {formatLabel(ticket.category)} · {formatDate(ticket.createdAt)}</span></div></div>
+              <span className={`priority priority--${ticket.priority.toLowerCase()}`}>{formatLabel(ticket.priority)}</span>
+              <span className={`status status--${ticket.status.toLowerCase().replaceAll('_', '-')}`}>{formatLabel(ticket.status)}</span>
+              <button className="row-action" type="button" onClick={() => onOpen(ticket.id)} aria-label={`Open ${ticket.referenceCode}`}><ChevronRight size={19} /></button>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }

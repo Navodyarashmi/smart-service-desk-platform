@@ -24,6 +24,7 @@ Controllers translate HTTP messages, services enforce business rules inside tran
 - Every application endpoint requires a valid signed JWT.
 - Requester queries always include the authenticated user ID, preventing cross-account ticket access.
 - Staff endpoints use method authorization for `TECHNICIAN` and `ADMINISTRATOR`.
+- Administration endpoints require `ADMINISTRATOR` and protect administrators from removing or locking their own access.
 - A staff member must claim a ticket before changing its status.
 - Secrets are supplied by environment variables and never committed.
 

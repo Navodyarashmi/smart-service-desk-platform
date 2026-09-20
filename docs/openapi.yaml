@@ -160,6 +160,48 @@ paths:
           description: Status updated
         '409':
           description: Invalid lifecycle transition
+  /api/v1/admin/users:
+    get:
+      summary: List user accounts and access state
+      description: Requires ADMINISTRATOR.
+      responses:
+        '200':
+          description: User administration records
+        '403':
+          description: Administrator role required
+  /api/v1/admin/users/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      summary: Change a user's role or account access state
+      description: Requires ADMINISTRATOR. An administrator cannot remove or lock their own access.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role, enabled, accountLocked]
+              properties:
+                role:
+                  type: string
+                  enum: [EMPLOYEE, TECHNICIAN, ADMINISTRATOR]
+                enabled:
+                  type: boolean
+                accountLocked:
+                  type: boolean
+      responses:
+        '200':
+          description: User updated
+        '403':
+          description: Administrator role required
+        '409':
+          description: Self-protection rule rejected the change
 components:
   securitySchemes:
     bearerAuth:

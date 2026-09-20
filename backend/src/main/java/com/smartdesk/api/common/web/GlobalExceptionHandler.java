@@ -1,6 +1,7 @@
 package com.smartdesk.api.common.web;
 
 import com.smartdesk.api.identity.service.AccountUnavailableException;
+import com.smartdesk.api.identity.service.AdminActionConflictException;
 import com.smartdesk.api.identity.service.EmailAlreadyRegisteredException;
 import com.smartdesk.api.identity.service.InvalidCredentialsException;
 import com.smartdesk.api.ticket.service.TicketRequesterNotFoundException;
@@ -21,6 +22,22 @@ import java.util.Map;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(AdminActionConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleAdminConflict(
+            AdminActionConflictException exception,
+            HttpServletRequest request
+    ) {
+        HttpStatus status = HttpStatus.CONFLICT;
+        return ResponseEntity.status(status).body(new ApiErrorResponse(
+                Instant.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        ));
+    }
 
     @ExceptionHandler(EmailAlreadyRegisteredException.class)
     public ResponseEntity<ApiErrorResponse> handleDuplicateEmail(

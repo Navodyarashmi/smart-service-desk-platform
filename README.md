@@ -6,6 +6,7 @@ HelpHub is a portfolio-ready IT service desk application with secure employee an
 
 - JWT authentication with BCrypt password hashing and 15-minute access tokens
 - Role-based authorization for `EMPLOYEE`, `TECHNICIAN`, and `ADMINISTRATOR`
+- Three purpose-built workspaces: requester, technician operations, and administration
 - Ticket creation, search, detail, update, cancellation, assignment, and status workflow
 - Responsive React dashboard with accessible forms and clear loading/error states
 - PostgreSQL schema managed by versioned Flyway migrations
@@ -135,6 +136,8 @@ Invalid transitions return HTTP `409 Conflict`. Requesters can only access their
 | `GET` | `/api/v1/staff/tickets` | Technician/Admin |
 | `POST` | `/api/v1/staff/tickets/{id}/claim` | Technician/Admin |
 | `PATCH` | `/api/v1/staff/tickets/{id}/status` | Assigned Technician/Admin |
+| `GET` | `/api/v1/admin/users` | Administrator |
+| `PATCH` | `/api/v1/admin/users/{id}` | Administrator |
 
 Error responses use one consistent shape with timestamp, HTTP status, message, path, and field-level validation errors.
 

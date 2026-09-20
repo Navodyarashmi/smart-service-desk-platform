@@ -580,6 +580,250 @@ a {
   font-size: 0.76rem;
   font-weight: 700;
   text-decoration: none;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+}
+
+.sidebar__workspace-badge {
+  display: flex;
+  margin-top: auto;
+  padding: 14px;
+  align-items: center;
+  gap: 11px;
+  color: #c5c9f8;
+  background: rgb(99 102 241 / 14%);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 13px;
+}
+
+.sidebar__workspace-badge span {
+  display: grid;
+  gap: 3px;
+}
+
+.sidebar__workspace-badge small {
+  color: #858faa;
+  font-size: 0.65rem;
+}
+
+.sidebar__workspace-badge strong {
+  color: #f4f6ff;
+  font-size: 0.78rem;
+}
+
+.dashboard-shell--technician .dashboard-eyebrow {
+  color: #147c74;
+}
+
+.dashboard-shell--administrator .dashboard-eyebrow {
+  color: #a04dba;
+}
+
+.user-menu--button {
+  padding: 5px 7px 5px 5px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+}
+
+.user-menu--button:hover {
+  background: #f7f8fc;
+  border-color: var(--border);
+}
+
+.workspace-alert {
+  margin-top: 20px;
+  margin-bottom: 0;
+}
+
+.admin-panel {
+  margin-top: 24px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  box-shadow: 0 8px 26px rgb(31 41 67 / 4%);
+}
+
+.admin-user-list {
+  display: grid;
+}
+
+.admin-user-row {
+  display: grid;
+  min-height: 82px;
+  padding: 15px 22px;
+  grid-template-columns: auto minmax(190px, 1fr) 155px 90px auto;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid #eef0f5;
+}
+
+.admin-user-row:last-child {
+  border-bottom: 0;
+}
+
+.admin-user-row__identity {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.admin-user-row__identity strong {
+  color: #30384a;
+  font-size: 0.84rem;
+}
+
+.admin-user-row__identity span {
+  overflow: hidden;
+  color: #9299a8;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+}
+
+.admin-user-row select {
+  min-height: 39px;
+  padding: 0 10px;
+  color: #4a5366;
+  background: #fafbfe;
+  border: 1px solid #dfe4ec;
+  border-radius: 9px;
+}
+
+.account-state {
+  width: fit-content;
+  padding: 5px 9px;
+  font-size: 0.68rem;
+  font-weight: 750;
+  border-radius: 999px;
+}
+
+.account-state--active {
+  color: #187a5d;
+  background: #eaf8f2;
+}
+
+.account-state--restricted {
+  color: #a13f54;
+  background: #fff0f3;
+}
+
+.admin-user-row__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.admin-user-row__actions button {
+  min-height: 35px;
+  padding: 0 10px;
+  color: #596276;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #ffffff;
+  border: 1px solid #dfe4ec;
+  border-radius: 8px;
+}
+
+.admin-user-row__actions button:hover:not(:disabled) {
+  color: var(--indigo);
+  border-color: #bfc0ee;
+}
+
+.admin-user-row__actions button:disabled,
+.admin-user-row select:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.profile-modal {
+  position: relative;
+  width: min(460px, calc(100vw - 32px));
+  padding: 34px;
+  text-align: center;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 30px 90px rgb(10 15 35 / 32%);
+}
+
+.profile-modal__close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+}
+
+.profile-modal__avatar {
+  display: grid;
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 20px;
+  place-items: center;
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 800;
+  background: linear-gradient(145deg, #7375f0, #4e4fcb);
+  border-radius: 23px;
+  box-shadow: 0 14px 28px rgb(78 79 203 / 25%);
+}
+
+.profile-modal h2 {
+  margin: 4px 0 23px;
+  color: #252d3f;
+  font-size: 1.55rem;
+}
+
+.profile-modal__details {
+  display: grid;
+  margin-bottom: 23px;
+  text-align: left;
+  gap: 10px;
+}
+
+.profile-modal__details > div {
+  display: flex;
+  min-width: 0;
+  padding: 13px 14px;
+  align-items: center;
+  gap: 12px;
+  color: #6264d9;
+  background: #f8f9fc;
+  border: 1px solid #e8ebf1;
+  border-radius: 12px;
+}
+
+.profile-modal__details span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.profile-modal__details small {
+  color: #969dac;
+  font-size: 0.66rem;
+}
+
+.profile-modal__details strong {
+  overflow: hidden;
+  color: #3b4456;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+  .admin-user-row {
+    grid-template-columns: auto minmax(0, 1fr) 130px;
+  }
+
+  .account-state,
+  .admin-user-row__actions {
+    grid-column: 2 / -1;
+  }
+
+  .admin-user-row__actions {
+    justify-content: flex-start;
+  }
 }
 
 .sidebar__support a:hover {

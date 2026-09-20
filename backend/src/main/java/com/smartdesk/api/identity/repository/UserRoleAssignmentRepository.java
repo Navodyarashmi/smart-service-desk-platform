@@ -20,4 +20,6 @@ public interface UserRoleAssignmentRepository
             UUID userId,
             RoleCode roleCode
     );
+
+    void deleteAllByUser_Id(UUID userId);
 }
