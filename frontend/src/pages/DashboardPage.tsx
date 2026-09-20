@@ -27,8 +27,10 @@ import {
 } from '../api/authApi'
 import { getTickets } from '../api/ticketApi'
 import { CreateTicketModal } from '../components/CreateTicketModal'
+import { TicketDetailsModal } from '../components/TicketDetailsModal'
 import type { CurrentUser } from '../types/auth'
 import type {
+  TicketDetails,
   TicketResponse,
   TicketStatus,
   TicketSummary,
@@ -59,6 +61,9 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [ticketModalOpen, setTicketModalOpen] = useState(false)
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(
+  null,
+)
 
   useEffect(() => {
     if (!accessToken) {
@@ -159,6 +164,25 @@ Promise.all([
     }
 
     setTickets((currentTickets) => [summary, ...currentTickets])
+  }
+
+  const handleTicketChanged = (ticket: TicketDetails) => {
+    setTickets((currentTickets) =>
+      currentTickets.map((currentTicket) =>
+        currentTicket.id === ticket.id
+          ? {
+              id: ticket.id,
+              referenceCode: ticket.referenceCode,
+              title: ticket.title,
+              category: ticket.category,
+              priority: ticket.priority,
+              status: ticket.status,
+              createdAt: ticket.createdAt,
+              updatedAt: ticket.updatedAt,
+            }
+          : currentTicket,
+      ),
+    )
   }
 
   if (loading) {
@@ -386,9 +410,10 @@ Promise.all([
                     </span>
 
                     <button
-                      className="row-action"
-                      type="button"
-                      aria-label={`Open ${ticket.referenceCode}`}
+                        className="row-action"
+                        type="button"
+                        onClick={() => setSelectedTicketId(ticket.id)}
+                        aria-label={`Open ${ticket.referenceCode}`}
                     >
                       <ChevronRight size={19} />
                     </button>
@@ -406,6 +431,15 @@ Promise.all([
         onClose={() => setTicketModalOpen(false)}
         onCreated={handleTicketCreated}
       />
+        {selectedTicketId && (
+        <TicketDetailsModal
+          key={selectedTicketId}
+          ticketId={selectedTicketId}
+          accessToken={accessToken}
+          onClose={() => setSelectedTicketId(null)}
+          onChanged={handleTicketChanged}
+        />
+      )}
     </div>
   )
 }

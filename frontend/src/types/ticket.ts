@@ -22,6 +22,13 @@ export interface CreateTicketRequest {
   priority: TicketPriority
 }
 
+export interface UpdateTicketRequest {
+  title: string
+  description: string
+  category: TicketCategory
+  priority: TicketPriority
+}
+
 export interface TicketResponse {
   id: string
   referenceCode: string
@@ -43,4 +50,19 @@ export interface TicketSummary {
   status: TicketStatus
   createdAt: string
   updatedAt: string
+}
+
+export interface TicketDetails {
+  id: string
+  referenceCode: string
+  title: string
+  description: string
+  category: TicketCategory
+  priority: TicketPriority
+  status: TicketStatus
+  requesterId: string
+  assigneeId: string | null
+  createdAt: string
+  updatedAt: string
+  resolvedAt: string | null
 }
