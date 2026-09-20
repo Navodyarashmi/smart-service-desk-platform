@@ -6,6 +6,7 @@ RUN --mount=type=cache,target=/root/.m2/repository \
     mvn --batch-mode --no-transfer-progress \
     -Dmaven.wagon.http.retryHandler.count=8 \
     -Daether.connector.basic.threads=1 \
+    -DskipTests \
     clean package
 
 FROM eclipse-temurin:21-jre-alpine

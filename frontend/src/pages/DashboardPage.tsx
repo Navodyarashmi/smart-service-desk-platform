@@ -42,16 +42,16 @@ import type {
   TicketSummary,
   NotificationItem,
 } from '../types/ticket'
+import {
+  countTicketsByCategory,
+  filterTickets,
+  formatLabel,
+  primaryRole,
+  resolveWorkspace,
+  type Workspace,
+} from '../utils/dashboard'
 
-type Workspace = 'employee' | 'technician' | 'administrator'
 type View = 'overview' | 'tickets' | 'users'
-
-function formatLabel(value: string): string {
-  return value
-    .toLowerCase()
-    .replaceAll('_', ' ')
-    .replace(/\b\w/g, (character) => character.toUpperCase())
-}
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('en', {
@@ -61,17 +61,6 @@ function formatDate(value: string): string {
   }).format(new Date(value))
 }
 
-function resolveWorkspace(user: CurrentUser): Workspace {
-  if (user.roles.includes('ADMINISTRATOR')) return 'administrator'
-  if (user.roles.includes('TECHNICIAN')) return 'technician'
-  return 'employee'
-}
-
-function primaryRole(roles: Role[]): Role {
-  if (roles.includes('ADMINISTRATOR')) return 'ADMINISTRATOR'
-  if (roles.includes('TECHNICIAN')) return 'TECHNICIAN'
-  return 'EMPLOYEE'
-}
 
 export function DashboardPage() {
   const navigate = useNavigate()
@@ -130,17 +119,7 @@ export function DashboardPage() {
   }, [accessToken, navigate])
 
   const filteredTickets = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase()
-    if (!query) return tickets
-    return tickets.filter((ticket) =>
-      [
-        ticket.referenceCode,
-        ticket.title,
-        ticket.category,
-        ticket.priority,
-        ticket.status,
-      ].some((value) => value.toLowerCase().includes(query)),
-    )
+    return filterTickets(tickets, searchQuery)
   }, [searchQuery, tickets])
 
   if (loading) {
@@ -208,10 +187,7 @@ export function DashboardPage() {
         { label: 'Resolved', value: countStatuses('RESOLVED', 'CLOSED'), detail: 'Successfully completed', icon: CheckCircle2, tone: 'green' },
       ]
 
-  const categoryCounts = ['HARDWARE', 'SOFTWARE', 'NETWORK', 'ACCESS', 'OTHER'].map((category) => ({
-    category,
-    count: tickets.filter((ticket) => ticket.category === category).length,
-  }))
+  const categoryCounts = countTicketsByCategory(tickets)
   const maxCategoryCount = Math.max(1, ...categoryCounts.map((item) => item.count))
   const unreadNotifications = notifications.filter((item) => !item.read).length
 

@@ -15,6 +15,7 @@ HelpHub is a portfolio-ready IT service desk application with secure employee an
 - Responsive React dashboard with accessible forms and clear loading/error states
 - PostgreSQL schema managed by versioned Flyway migrations
 - Spring Boot integration tests and automated frontend lint/build checks
+- Native frontend logic tests and CI container-build verification
 - Multi-stage production containers, health checks, and GitHub Actions CI
 - Optional local demo accounts—disabled by default
 
@@ -163,3 +164,8 @@ compose.yaml             PostgreSQL + backend + frontend
 ```
 
 See [docs/architecture.md](docs/architecture.md) for the system design and security boundaries. The complete machine-readable contract is in [docs/openapi.yaml](docs/openapi.yaml).
+
+Additional documentation:
+
+- [Production deployment](docs/deployment.md)
+- [Portfolio project report](docs/project-report.md)

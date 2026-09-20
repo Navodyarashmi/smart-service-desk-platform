@@ -9,6 +9,14 @@ HelpHub uses a conventional three-tier architecture:
 3. Spring Boot validates JWTs, enforces ownership and role rules, applies business transitions, and persists through JPA.
 4. PostgreSQL stores users, roles, assignments, tickets, activity history, and notifications; Flyway owns schema evolution.
 
+```mermaid
+flowchart LR
+    User[Browser] -->|HTTPS| Web[Nginx + React]
+    Web -->|/api| API[Spring Boot API]
+    API --> DB[(PostgreSQL)]
+    API --> Files[(Attachment volume)]
+```
+
 ## Backend boundaries
 
 - `identity`: registration, authentication, user roles, current-user data, and user notifications.
