@@ -132,6 +132,23 @@ public class ServiceTicket {
         );
     }
 
+    public void updateDetails(
+            String title,
+            String description,
+            TicketCategory category,
+            TicketPriority priority
+    ) {
+        this.title = requireText(title, "Title");
+        this.description = requireText(description, "Description");
+        this.category = Objects.requireNonNull(
+                category,
+                "Category must not be null."
+        );
+        this.priority = Objects.requireNonNull(
+                priority,
+                "Priority must not be null."
+        );
+    }
     public void assignTo(UserAccount technician) {
         this.assignee = Objects.requireNonNull(
                 technician,
