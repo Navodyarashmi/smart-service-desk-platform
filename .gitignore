@@ -6,6 +6,7 @@
 # Java and Maven build output
 backend/target/
 backend/*.log
+backend/data/
 *.class
 
 # Spring Boot local configuration containing secrets

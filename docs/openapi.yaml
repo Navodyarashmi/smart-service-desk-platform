@@ -141,6 +141,49 @@ paths:
           description: Activity added
         '409':
           description: An employee attempted to add an internal note
+  /api/v1/tickets/{ticketId}/attachments:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      summary: List ticket attachments visible to the caller
+      responses:
+        '200':
+          description: Attachment metadata ordered by upload time
+    post:
+      summary: Upload a ticket attachment
+      description: Accepts PDF, PNG, JPEG, or plain text up to 5 MB.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Attachment stored
+        '400':
+          description: File type, signature, or size was rejected
+  /api/v1/tickets/{ticketId}/attachments/{attachmentId}/content:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Download an authorized ticket attachment
+      responses:
+        '200':
+          description: Attachment bytes
+        '404':
+          description: Ticket or attachment is unavailable to the caller
   /api/v1/notifications:
     get:
       summary: List notifications for the authenticated user

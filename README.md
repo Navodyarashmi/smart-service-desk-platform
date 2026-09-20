@@ -10,6 +10,7 @@ HelpHub is a portfolio-ready IT service desk application with secure employee an
 - Ticket creation, search, detail, update, cancellation, assignment, and status workflow
 - Shared ticket timeline with requester comments, staff-only internal notes, and automatic audit events
 - In-app notifications for assignment, status, and conversation updates
+- Secure PDF, image, and text attachments with ownership checks and persistent Docker storage
 - Live category analytics in every role-specific workspace
 - Responsive React dashboard with accessible forms and clear loading/error states
 - PostgreSQL schema managed by versioned Flyway migrations
@@ -137,6 +138,8 @@ Invalid transitions return HTTP `409 Conflict`. Requesters can only access their
 | `GET`, `PATCH` | `/api/v1/tickets/{id}` | Ticket owner |
 | `POST` | `/api/v1/tickets/{id}/cancel` | Ticket owner |
 | `GET`, `POST` | `/api/v1/tickets/{id}/activity` | Ticket owner or staff; internal notes are staff-only |
+| `GET`, `POST` | `/api/v1/tickets/{id}/attachments` | Ticket owner or staff |
+| `GET` | `/api/v1/tickets/{id}/attachments/{attachmentId}/content` | Ticket owner or staff |
 | `GET` | `/api/v1/notifications` | Authenticated user |
 | `PATCH` | `/api/v1/notifications/{id}/read` | Notification owner |
 | `GET` | `/api/v1/staff/tickets` | Technician/Admin |
@@ -146,6 +149,8 @@ Invalid transitions return HTTP `409 Conflict`. Requesters can only access their
 | `PATCH` | `/api/v1/admin/users/{id}` | Administrator |
 
 Error responses use one consistent shape with timestamp, HTTP status, message, path, and field-level validation errors.
+
+Attachments are limited to PDF, PNG, JPEG, and plain-text files up to 5 MB. Files are stored under generated names outside the web root; the original name is retained only as metadata and for downloads.
 
 ## Repository layout
 

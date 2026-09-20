@@ -33,11 +33,14 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       DEMO_SEED_ENABLED: ${DEMO_SEED_ENABLED:-false}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+      ATTACHMENT_STORAGE_PATH: /app/data/attachments
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - attachment-data:/app/data/attachments
     healthcheck:
       test:
         - CMD-SHELL
@@ -59,3 +62,4 @@ services:
 
 volumes:
   postgres-data:
+  attachment-data:

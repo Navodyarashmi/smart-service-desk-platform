@@ -7,5 +7,6 @@ public enum TicketActivityType {
     ASSIGNED,
     STATUS_CHANGED,
     UPDATED,
-    CANCELLED
+    CANCELLED,
+    ATTACHMENT_ADDED
 }

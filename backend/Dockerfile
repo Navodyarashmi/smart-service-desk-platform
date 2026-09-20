@@ -11,6 +11,7 @@ RUN --mount=type=cache,target=/root/.m2/repository \
 FROM eclipse-temurin:21-jre-alpine
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
+RUN mkdir -p /app/data/attachments && chown -R app:app /app/data
 COPY --from=build /workspace/target/*.jar app.jar
 USER app
 EXPOSE 8080

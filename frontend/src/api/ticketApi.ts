@@ -2,6 +2,7 @@ import type {
   CreateTicketRequest,
   TicketDetails,
   TicketActivity,
+  TicketAttachment,
   TicketResponse,
   TicketSummary,
   UpdateTicketRequest,
@@ -34,6 +35,49 @@ export function addTicketComment(accessToken: string, ticketId: string, message:
     headers: { ...authorizationHeader(accessToken), 'Content-Type': 'application/json' },
     body: JSON.stringify({ message, internalNote }),
   })
+}
+
+export function getTicketAttachments(
+  accessToken: string,
+  ticketId: string,
+): Promise<TicketAttachment[]> {
+  return apiRequest<TicketAttachment[]>(`/api/v1/tickets/${ticketId}/attachments`, {
+    headers: authorizationHeader(accessToken),
+  })
+}
+
+export function uploadTicketAttachment(
+  accessToken: string,
+  ticketId: string,
+  file: File,
+): Promise<TicketAttachment> {
+  const body = new FormData()
+  body.append('file', file)
+  return apiRequest<TicketAttachment>(`/api/v1/tickets/${ticketId}/attachments`, {
+    method: 'POST',
+    headers: authorizationHeader(accessToken),
+    body,
+  })
+}
+
+export async function downloadTicketAttachment(
+  accessToken: string,
+  ticketId: string,
+  attachment: TicketAttachment,
+): Promise<void> {
+  const response = await fetch(
+    `/api/v1/tickets/${ticketId}/attachments/${attachment.id}/content`,
+    { headers: authorizationHeader(accessToken) },
+  )
+  if (!response.ok) throw new Error('Attachment download failed.')
+  const objectUrl = URL.createObjectURL(await response.blob())
+  const link = document.createElement('a')
+  link.href = objectUrl
+  link.download = attachment.filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(objectUrl)
 }
 
 export function getStaffTickets(

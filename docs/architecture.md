@@ -28,6 +28,8 @@ Controllers translate HTTP messages, services enforce business rules inside tran
 - A staff member must claim a ticket before changing its status.
 - Internal notes are returned only to technicians and administrators; requester comments remain visible to both sides.
 - Notification lookups are always scoped to the authenticated recipient.
+- Attachment metadata is stored in PostgreSQL, while file bytes use generated names in a non-public storage directory. Downloads repeat ticket ownership/role authorization.
+- Attachment uploads use a strict type allowlist, signature checks, and a 5 MB limit. Production deployments should additionally scan files for malware before release.
 - Secrets are supplied by environment variables and never committed.
 
 ## Operational design
@@ -40,4 +42,4 @@ Controllers translate HTTP messages, services enforce business rules inside tran
 
 ## Known production extensions
 
-This release is intentionally a focused service-desk MVP. A production rollout should add refresh-token rotation or an external identity provider, object storage plus malware scanning for attachments, rate limiting at the edge, centralized audit/observability, email or push delivery, and managed secret storage.
+This release is intentionally a focused service-desk MVP. A production rollout should add refresh-token rotation or an external identity provider, managed object storage plus malware scanning, rate limiting at the edge, centralized observability, email or push delivery, and managed secret storage.

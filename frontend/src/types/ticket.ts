@@ -75,6 +75,7 @@ export type TicketActivityType =
   | 'STATUS_CHANGED'
   | 'UPDATED'
   | 'CANCELLED'
+  | 'ATTACHMENT_ADDED'
 
 export interface TicketActivity {
   id: string
@@ -91,5 +92,15 @@ export interface NotificationItem {
   ticketId: string | null
   message: string
   read: boolean
+  createdAt: string
+}
+
+export interface TicketAttachment {
+  id: string
+  filename: string
+  contentType: string
+  sizeBytes: number
+  uploaderId: string | null
+  uploaderName: string
   createdAt: string
 }

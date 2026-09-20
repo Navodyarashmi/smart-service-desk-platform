@@ -286,6 +286,140 @@
   }
 }
 
+.attachment-panel {
+  display: grid;
+  margin-top: 18px;
+  padding: 18px;
+  gap: 10px;
+  background: #fbfcff;
+  border: 1px solid #e7eaf1;
+  border-radius: 14px;
+}
+
+.attachment-panel__heading,
+.attachment-panel__heading > div {
+  display: flex;
+  align-items: center;
+}
+
+.attachment-panel__heading {
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.attachment-panel__heading > div {
+  gap: 9px;
+  color: #6669d9;
+}
+
+.attachment-panel__heading h4 {
+  margin: 0;
+  color: #333c4e;
+  font-size: 0.83rem;
+}
+
+.attachment-upload-button {
+  display: inline-flex;
+  min-height: 34px;
+  padding: 0 11px;
+  align-items: center;
+  gap: 6px;
+  color: #5759ca;
+  font-size: 0.68rem;
+  font-weight: 750;
+  background: #efefff;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.attachment-upload-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.attachment-panel__help {
+  margin: -2px 0 2px;
+  color: #959cab;
+  font-size: 0.65rem;
+}
+
+.attachment-empty {
+  display: flex;
+  min-height: 62px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #9aa1af;
+  font-size: 0.73rem;
+  background: #ffffff;
+  border: 1px dashed #dfe3eb;
+  border-radius: 11px;
+}
+
+.attachment-list {
+  display: grid;
+  gap: 7px;
+}
+
+.attachment-row {
+  display: grid;
+  padding: 9px 10px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1px solid #e7eaf0;
+  border-radius: 11px;
+}
+
+.attachment-row__icon,
+.attachment-row button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: #6669d9;
+  background: #f0f0ff;
+  border-radius: 9px;
+}
+
+.attachment-row > div {
+  min-width: 0;
+}
+
+.attachment-row strong,
+.attachment-row small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-row strong {
+  color: #414a5d;
+  font-size: 0.73rem;
+}
+
+.attachment-row small {
+  margin-top: 3px;
+  color: #959cab;
+  font-size: 0.62rem;
+}
+
+.attachment-row button {
+  color: #6f7789;
+  background: #f7f8fb;
+  border: 0;
+}
+
+.attachment-row button:hover {
+  color: #5659cc;
+  background: #ededff;
+}
+
 .activity-panel {
   margin-top: 18px;
   padding: 19px;

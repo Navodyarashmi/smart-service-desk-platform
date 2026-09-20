@@ -3,10 +3,12 @@ import {
   AlertTriangle,
   Ban,
   CalendarDays,
+  Download,
   FileText,
   Layers3,
   LoaderCircle,
   MessageSquare,
+  Paperclip,
   Pencil,
   Save,
   Send,
@@ -14,11 +16,12 @@ import {
   Sparkles,
   Tag,
   TicketCheck,
+  Upload,
   UserRound,
   X,
 } from 'lucide-react'
 import './TicketDetailsModal.css'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
@@ -31,9 +34,12 @@ import {
   getTicket,
   getStaffTicket,
   getTicketActivity,
+  getTicketAttachments,
+  downloadTicketAttachment,
+  uploadTicketAttachment,
   updateTicket,
 } from '../api/ticketApi'
-import type { TicketActivity, TicketDetails } from '../types/ticket'
+import type { TicketActivity, TicketAttachment, TicketDetails } from '../types/ticket'
 
 const updateSchema = z.object({
   title: z
@@ -81,6 +87,12 @@ function formatDate(value: string): string {
   }).format(new Date(value))
 }
 
+function formatFileSize(sizeBytes: number): string {
+  if (sizeBytes < 1024) return `${sizeBytes} B`
+  if (sizeBytes < 1024 * 1024) return `${(sizeBytes / 1024).toFixed(1)} KB`
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 export function TicketDetailsModal({
   ticketId,
   accessToken,
@@ -100,6 +112,8 @@ export function TicketDetailsModal({
   const [commentMessage, setCommentMessage] = useState('')
   const [internalNote, setInternalNote] = useState(false)
   const [commentSubmitting, setCommentSubmitting] = useState(false)
+  const [attachments, setAttachments] = useState<TicketAttachment[]>([])
+  const [attachmentUploading, setAttachmentUploading] = useState(false)
 
   const {
     register,
@@ -116,8 +130,12 @@ export function TicketDetailsModal({
 
     const loadTicket = isStaff ? getStaffTicket : getTicket
 
-    loadTicket(accessToken, ticketId)
-      .then((loadedTicket) => {
+    Promise.all([
+      loadTicket(accessToken, ticketId),
+      getTicketActivity(accessToken, ticketId),
+      getTicketAttachments(accessToken, ticketId),
+    ])
+      .then(([loadedTicket, loadedActivity, loadedAttachments]) => {
         if (!active) {
           return
         }
@@ -129,11 +147,9 @@ export function TicketDetailsModal({
           category: loadedTicket.category,
           priority: loadedTicket.priority,
         })
+        setActivity(loadedActivity)
+        setAttachments(loadedAttachments)
       })
-
-    getTicketActivity(accessToken, ticketId)
-      .then((items) => { if (active) setActivity(items) })
-      .catch(() => { if (active) setActionError('The ticket timeline could not be loaded.') })
       .catch(() => {
         if (active) {
           setLoadError('The ticket details could not be loaded.')
@@ -285,6 +301,37 @@ export function TicketDetailsModal({
     }
   }
 
+  const uploadAttachment = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0]
+    event.currentTarget.value = ''
+    if (!file) return
+
+    setAttachmentUploading(true)
+    setActionError(null)
+    try {
+      const added = await uploadTicketAttachment(accessToken, ticketId, file)
+      setAttachments((current) => [...current, added])
+      setActivity(await getTicketActivity(accessToken, ticketId))
+    } catch (error) {
+      setActionError(
+        error instanceof ApiRequestError
+          ? error.message
+          : 'The attachment could not be uploaded.',
+      )
+    } finally {
+      setAttachmentUploading(false)
+    }
+  }
+
+  const downloadAttachment = async (attachment: TicketAttachment) => {
+    setActionError(null)
+    try {
+      await downloadTicketAttachment(accessToken, ticketId, attachment)
+    } catch {
+      setActionError('The attachment could not be downloaded.')
+    }
+  }
+
   return (
     <div
       className="modal-backdrop"
@@ -407,6 +454,62 @@ export function TicketDetailsModal({
                 <h4>Description</h4>
               </div>
               <p>{ticket.description}</p>
+            </section>
+
+            <section className="attachment-panel">
+              <div className="attachment-panel__heading">
+                <div>
+                  <Paperclip size={18} />
+                  <h4>Attachments</h4>
+                </div>
+                <label className="attachment-upload-button">
+                  {attachmentUploading ? (
+                    <LoaderCircle className="spin" size={15} />
+                  ) : (
+                    <Upload size={15} />
+                  )}
+                  {attachmentUploading ? 'Uploading…' : 'Add file'}
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,.txt,application/pdf,image/png,image/jpeg,text/plain"
+                    disabled={attachmentUploading}
+                    onChange={uploadAttachment}
+                  />
+                </label>
+              </div>
+              <p className="attachment-panel__help">
+                PDF, PNG, JPEG, or TXT · maximum 5 MB
+              </p>
+              {attachments.length === 0 ? (
+                <div className="attachment-empty">
+                  <Paperclip size={18} />
+                  <span>No files attached yet.</span>
+                </div>
+              ) : (
+                <div className="attachment-list">
+                  {attachments.map((attachment) => (
+                    <article className="attachment-row" key={attachment.id}>
+                      <span className="attachment-row__icon">
+                        <FileText size={17} />
+                      </span>
+                      <div>
+                        <strong>{attachment.filename}</strong>
+                        <small>
+                          {formatFileSize(attachment.sizeBytes)} ·{' '}
+                          {attachment.uploaderName}
+                        </small>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => downloadAttachment(attachment)}
+                        aria-label={`Download ${attachment.filename}`}
+                      >
+                        <Download size={17} />
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              )}
             </section>
 
             <section className="activity-panel">
