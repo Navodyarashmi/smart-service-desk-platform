@@ -1,6 +1,5 @@
 import {
   AlertTriangle,
-  Bell,
   CheckCircle2,
   ChevronRight,
   CircleUserRound,
@@ -14,7 +13,7 @@ import {
   Plus,
   Search,
   TicketCheck,
-  UsersRound,
+  Wrench,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -25,7 +24,7 @@ import {
   getAccessToken,
   getCurrentUser,
 } from '../api/authApi'
-import { getTickets } from '../api/ticketApi'
+import { getStaffTickets, getTickets } from '../api/ticketApi'
 import { CreateTicketModal } from '../components/CreateTicketModal'
 import { TicketDetailsModal } from '../components/TicketDetailsModal'
 import type { CurrentUser } from '../types/auth'
@@ -71,11 +70,14 @@ export function DashboardPage() {
   return
 }
 
-Promise.all([
-  getCurrentUser(accessToken),
-  getTickets(accessToken),
-])
-      .then(([currentUser, currentTickets]) => {
+    getCurrentUser(accessToken)
+      .then(async (currentUser) => {
+        const isStaff = currentUser.roles.some(
+          (role) => role === 'TECHNICIAN' || role === 'ADMINISTRATOR',
+        )
+        const currentTickets = isStaff
+          ? await getStaffTickets(accessToken)
+          : await getTickets(accessToken)
         setUser(currentUser)
         setTickets(currentTickets)
       })
@@ -217,6 +219,9 @@ Promise.all([
   }
 
   const firstName = user.fullName.split(' ')[0]
+  const isStaff = user.roles.some(
+    (role) => role === 'TECHNICIAN' || role === 'ADMINISTRATOR',
+  )
   const initials = user.fullName
     .split(' ')
     .map((part) => part[0])
@@ -242,14 +247,16 @@ Promise.all([
 
           <a className="nav-item" href="#tickets">
             <ListTodo size={19} />
-            My tickets
+            {isStaff ? 'Work queue' : 'My tickets'}
             <span className="nav-item__count">{tickets.length}</span>
           </a>
 
-          <a className="nav-item" href="#team">
-            <UsersRound size={19} />
-            Team
-          </a>
+          {isStaff && (
+            <a className="nav-item" href="#tickets">
+              <Wrench size={19} />
+              Operations
+            </a>
+          )}
         </nav>
 
         <div className="sidebar__support">
@@ -258,7 +265,7 @@ Promise.all([
           </span>
           <strong>Need urgent help?</strong>
           <p>Contact the service desk directly.</p>
-          <button type="button">View contacts</button>
+          <a href="mailto:helpdesk@example.com">Email service desk</a>
         </div>
 
         <button className="sign-out-button" type="button" onClick={signOut}>
@@ -281,15 +288,6 @@ Promise.all([
           </div>
 
           <div className="topbar__actions">
-            <button
-              className="icon-button"
-              type="button"
-              aria-label="Notifications"
-            >
-              <Bell size={20} />
-              <span className="notification-dot" />
-            </button>
-
             <div className="user-menu">
               <span className="user-avatar">{initials}</span>
 
@@ -306,21 +304,27 @@ Promise.all([
         <div className="dashboard-content">
           <section className="welcome-row">
             <div>
-              <p className="dashboard-eyebrow">Employee workspace</p>
+              <p className="dashboard-eyebrow">
+                {isStaff ? 'Service desk operations' : 'Employee workspace'}
+              </p>
               <h1>Good to see you, {firstName}.</h1>
               <p>
-                Track your requests and reach the right support team.
+                {isStaff
+                  ? 'Prioritize requests, claim work, and keep support moving.'
+                  : 'Track your requests and reach the right support team.'}
               </p>
             </div>
 
-            <button
-              className="primary-button primary-button--compact"
-              type="button"
-              onClick={() => setTicketModalOpen(true)}
-            >
-              <Plus size={19} />
-              Create ticket
-            </button>
+            {!isStaff && (
+              <button
+                className="primary-button primary-button--compact"
+                type="button"
+                onClick={() => setTicketModalOpen(true)}
+              >
+                <Plus size={19} />
+                Create ticket
+              </button>
+            )}
           </section>
 
           <section className="stats-grid" aria-label="Ticket statistics">
@@ -339,8 +343,12 @@ Promise.all([
           <section className="ticket-panel" id="tickets">
             <header className="ticket-panel__header">
               <div>
-                <h2>Your tickets</h2>
-                <p>Live requests loaded securely from the service desk.</p>
+                <h2>{isStaff ? 'Team work queue' : 'Your tickets'}</h2>
+                <p>
+                  {isStaff
+                    ? 'All requests, ordered by newest activity.'
+                    : 'Live requests loaded securely from the service desk.'}
+                </p>
               </div>
 
               <span className="ticket-result-count">
@@ -365,7 +373,7 @@ Promise.all([
                     : 'Create your first request and track it here.'}
                 </p>
 
-                {!searchQuery && (
+                {!searchQuery && !isStaff && (
                   <button
                     className="text-button"
                     type="button"
@@ -438,6 +446,8 @@ Promise.all([
           accessToken={accessToken}
           onClose={() => setSelectedTicketId(null)}
           onChanged={handleTicketChanged}
+          isStaff={isStaff}
+          currentUserId={user.id}
         />
       )}
     </div>

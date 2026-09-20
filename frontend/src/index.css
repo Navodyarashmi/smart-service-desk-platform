@@ -574,13 +574,17 @@ a {
   line-height: 1.5;
 }
 
-.sidebar__support button {
+.sidebar__support a {
   padding: 0;
   color: #b8bafa;
   font-size: 0.76rem;
   font-weight: 700;
-  background: transparent;
-  border: 0;
+  text-decoration: none;
+}
+
+.sidebar__support a:hover {
+  color: #ffffff;
+  text-decoration: underline;
 }
 
 .sign-out-button {

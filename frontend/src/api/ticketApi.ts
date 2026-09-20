@@ -21,6 +21,14 @@ export function getTickets(
   })
 }
 
+export function getStaffTickets(
+  accessToken: string,
+): Promise<TicketSummary[]> {
+  return apiRequest<TicketSummary[]>('/api/v1/staff/tickets', {
+    headers: authorizationHeader(accessToken),
+  })
+}
+
 export function getTicket(
   accessToken: string,
   ticketId: string,
@@ -28,6 +36,46 @@ export function getTicket(
   return apiRequest<TicketDetails>(`/api/v1/tickets/${ticketId}`, {
     headers: authorizationHeader(accessToken),
   })
+}
+
+export function getStaffTicket(
+  accessToken: string,
+  ticketId: string,
+): Promise<TicketDetails> {
+  return apiRequest<TicketDetails>(`/api/v1/staff/tickets/${ticketId}`, {
+    headers: authorizationHeader(accessToken),
+  })
+}
+
+export function claimTicket(
+  accessToken: string,
+  ticketId: string,
+): Promise<TicketDetails> {
+  return apiRequest<TicketDetails>(
+    `/api/v1/staff/tickets/${ticketId}/claim`,
+    {
+      method: 'POST',
+      headers: authorizationHeader(accessToken),
+    },
+  )
+}
+
+export function changeTicketStatus(
+  accessToken: string,
+  ticketId: string,
+  status: 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED',
+): Promise<TicketDetails> {
+  return apiRequest<TicketDetails>(
+    `/api/v1/staff/tickets/${ticketId}/status`,
+    {
+      method: 'PATCH',
+      headers: {
+        ...authorizationHeader(accessToken),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status }),
+    },
+  )
 }
 
 export function createTicket(

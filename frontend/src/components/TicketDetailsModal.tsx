@@ -8,6 +8,7 @@ import {
   LoaderCircle,
   Pencil,
   Save,
+  Sparkles,
   Tag,
   TicketCheck,
   UserRound,
@@ -21,7 +22,10 @@ import { z } from 'zod'
 import { ApiRequestError } from '../api/apiClient'
 import {
   cancelTicket,
+  changeTicketStatus,
+  claimTicket,
   getTicket,
+  getStaffTicket,
   updateTicket,
 } from '../api/ticketApi'
 import type { TicketDetails } from '../types/ticket'
@@ -54,6 +58,8 @@ interface TicketDetailsModalProps {
   accessToken: string
   onClose: () => void
   onChanged: (ticket: TicketDetails) => void
+  isStaff?: boolean
+  currentUserId: string
 }
 
 function formatLabel(value: string): string {
@@ -75,6 +81,8 @@ export function TicketDetailsModal({
   accessToken,
   onClose,
   onChanged,
+  isStaff = false,
+  currentUserId,
 }: TicketDetailsModalProps) {
   const [ticket, setTicket] = useState<TicketDetails | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -82,6 +90,7 @@ export function TicketDetailsModal({
   const [editing, setEditing] = useState(false)
   const [confirmingCancel, setConfirmingCancel] = useState(false)
   const [cancelling, setCancelling] = useState(false)
+  const [staffActionRunning, setStaffActionRunning] = useState(false)
 
   const {
     register,
@@ -96,7 +105,9 @@ export function TicketDetailsModal({
   useEffect(() => {
     let active = true
 
-    getTicket(accessToken, ticketId)
+    const loadTicket = isStaff ? getStaffTicket : getTicket
+
+    loadTicket(accessToken, ticketId)
       .then((loadedTicket) => {
         if (!active) {
           return
@@ -119,7 +130,7 @@ export function TicketDetailsModal({
     return () => {
       active = false
     }
-  }, [accessToken, reset, ticketId])
+  }, [accessToken, isStaff, reset, ticketId])
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -197,7 +208,49 @@ export function TicketDetailsModal({
   }
 
   const editable =
-    ticket?.status === 'OPEN' || ticket?.status === 'ASSIGNED'
+    !isStaff && (ticket?.status === 'OPEN' || ticket?.status === 'ASSIGNED')
+
+  const runStaffAction = async (
+    action: 'claim' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED',
+  ) => {
+    setStaffActionRunning(true)
+    setActionError(null)
+
+    try {
+      const changedTicket =
+        action === 'claim'
+          ? await claimTicket(accessToken, ticketId)
+          : await changeTicketStatus(accessToken, ticketId, action)
+      setTicket(changedTicket)
+      onChanged(changedTicket)
+    } catch (error) {
+      setActionError(
+        error instanceof ApiRequestError
+          ? error.message
+          : 'The ticket workflow could not be updated.',
+      )
+    } finally {
+      setStaffActionRunning(false)
+    }
+  }
+
+  const nextStaffAction = (() => {
+    if (!ticket || !isStaff) return null
+    if (!ticket.assigneeId) {
+      return { action: 'claim' as const, label: 'Claim ticket' }
+    }
+    if (ticket.assigneeId !== currentUserId) return null
+    if (ticket.status === 'ASSIGNED') {
+      return { action: 'IN_PROGRESS' as const, label: 'Start work' }
+    }
+    if (ticket.status === 'IN_PROGRESS') {
+      return { action: 'RESOLVED' as const, label: 'Mark resolved' }
+    }
+    if (ticket.status === 'RESOLVED') {
+      return { action: 'CLOSED' as const, label: 'Close ticket' }
+    }
+    return null
+  })()
 
   return (
     <div
@@ -376,13 +429,30 @@ export function TicketDetailsModal({
               )}
 
               {!editable && (
-                <button
-                  className="secondary-button"
-                  type="button"
-                  onClick={onClose}
-                >
-                  Close
-                </button>
+                <>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={onClose}
+                  >
+                    Close
+                  </button>
+                  {nextStaffAction && (
+                    <button
+                      className="primary-button primary-button--compact"
+                      type="button"
+                      disabled={staffActionRunning}
+                      onClick={() => runStaffAction(nextStaffAction.action)}
+                    >
+                      {staffActionRunning ? (
+                        <LoaderCircle className="spin" size={17} />
+                      ) : (
+                        <Sparkles size={17} />
+                      )}
+                      {nextStaffAction.label}
+                    </button>
+                  )}
+                </>
               )}
             </footer>
           </div>

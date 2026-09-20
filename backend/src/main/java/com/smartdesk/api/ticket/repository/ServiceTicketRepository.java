@@ -14,6 +14,8 @@ public interface ServiceTicketRepository
             UUID requesterId
     );
 
+    List<ServiceTicket> findAllByOrderByCreatedAtDesc();
+
     Optional<ServiceTicket> findByIdAndRequester_Id(
             UUID ticketId,
             UUID requesterId

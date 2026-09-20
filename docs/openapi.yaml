@@ -1,0 +1,287 @@
+openapi: 3.1.0
+info:
+  title: HelpHub Smart Service Desk API
+  version: 1.0.0
+  description: Secure employee and service-desk ticket workflows.
+servers:
+  - url: http://localhost:8080
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/auth/register:
+    post:
+      summary: Register an employee account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrationRequest'
+      responses:
+        '201':
+          description: Account created
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already registered
+  /api/v1/auth/login:
+    post:
+      summary: Exchange credentials for an access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication succeeded
+        '401':
+          description: Invalid credentials
+  /api/v1/users/me:
+    get:
+      summary: Read the authenticated user profile
+      responses:
+        '200':
+          description: Current user
+        '401':
+          description: Missing or invalid token
+  /api/v1/tickets:
+    get:
+      summary: List tickets owned by the authenticated requester
+      responses:
+        '200':
+          description: Ticket summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TicketSummary'
+    post:
+      summary: Create a ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketInput'
+      responses:
+        '201':
+          description: Ticket created
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/v1/tickets/{ticketId}:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      summary: Read an owned ticket
+      responses:
+        '200':
+          description: Ticket details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketDetails'
+        '404':
+          description: Ticket not found or not owned by caller
+    patch:
+      summary: Update an active owned ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketInput'
+      responses:
+        '200':
+          description: Ticket updated
+        '409':
+          description: Ticket can no longer be edited
+  /api/v1/tickets/{ticketId}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    post:
+      summary: Cancel an active owned ticket
+      responses:
+        '200':
+          description: Ticket cancelled
+        '409':
+          description: Invalid lifecycle operation
+  /api/v1/staff/tickets:
+    get:
+      summary: List the team work queue
+      description: Requires TECHNICIAN or ADMINISTRATOR.
+      responses:
+        '200':
+          description: All ticket summaries
+        '403':
+          description: Staff role required
+  /api/v1/staff/tickets/{ticketId}:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      summary: Read a ticket from the staff queue
+      responses:
+        '200':
+          description: Ticket details
+        '403':
+          description: Staff role required
+  /api/v1/staff/tickets/{ticketId}/claim:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    post:
+      summary: Assign an unclaimed ticket to the authenticated staff member
+      responses:
+        '200':
+          description: Ticket assigned
+        '409':
+          description: Ticket is unavailable for assignment
+  /api/v1/staff/tickets/{ticketId}/status:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    patch:
+      summary: Progress an assigned ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [IN_PROGRESS, RESOLVED, CLOSED]
+      responses:
+        '200':
+          description: Status updated
+        '409':
+          description: Invalid lifecycle transition
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    TicketId:
+      name: ticketId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    BadRequest:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    RegistrationRequest:
+      type: object
+      required: [email, password, fullName]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 12
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 150
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    TicketInput:
+      type: object
+      required: [title, description, category, priority]
+      properties:
+        title:
+          type: string
+          minLength: 4
+          maxLength: 160
+        description:
+          type: string
+          minLength: 10
+          maxLength: 4000
+        category:
+          type: string
+          enum: [HARDWARE, SOFTWARE, NETWORK, ACCESS, OTHER]
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+    TicketSummary:
+      type: object
+      required: [id, referenceCode, title, category, priority, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        referenceCode:
+          type: string
+        title:
+          type: string
+        category:
+          type: string
+        priority:
+          type: string
+        status:
+          $ref: '#/components/schemas/TicketStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    TicketDetails:
+      allOf:
+        - $ref: '#/components/schemas/TicketSummary'
+        - type: object
+          required: [description, requesterId]
+          properties:
+            description:
+              type: string
+            requesterId:
+              type: string
+              format: uuid
+            assigneeId:
+              type: [string, 'null']
+              format: uuid
+            resolvedAt:
+              type: [string, 'null']
+              format: date-time
+    TicketStatus:
+      type: string
+      enum: [OPEN, ASSIGNED, IN_PROGRESS, RESOLVED, CLOSED, CANCELLED]
+    ApiError:
+      type: object
+      required: [timestamp, status, error, message, path, fieldErrors]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        fieldErrors:
+          type: object
+          additionalProperties:
+            type: string

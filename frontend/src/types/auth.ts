@@ -1,4 +1,4 @@
-export type Role = 'EMPLOYEE' | 'TECHNICIAN' | 'ADMIN'
+export type Role = 'EMPLOYEE' | 'TECHNICIAN' | 'ADMINISTRATOR'
 
 export interface RegistrationRequest {
   email: string
