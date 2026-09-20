@@ -3,6 +3,7 @@ package com.smartdesk.api.common.web;
 import com.smartdesk.api.identity.service.AccountUnavailableException;
 import com.smartdesk.api.identity.service.EmailAlreadyRegisteredException;
 import com.smartdesk.api.identity.service.InvalidCredentialsException;
+import com.smartdesk.api.ticket.service.TicketRequesterNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -94,6 +95,25 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         HttpStatus status = HttpStatus.FORBIDDEN;
+
+        return ResponseEntity.status(status).body(
+                new ApiErrorResponse(
+                        Instant.now(),
+                        status.value(),
+                        status.getReasonPhrase(),
+                        exception.getMessage(),
+                        request.getRequestURI(),
+                        Map.of()
+                )
+        );
+    }
+
+    @ExceptionHandler(TicketRequesterNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleMissingRequester(
+            TicketRequesterNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
 
         return ResponseEntity.status(status).body(
                 new ApiErrorResponse(
