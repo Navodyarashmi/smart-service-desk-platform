@@ -3,16 +3,19 @@ package com.smartdesk.api.ticket.web;
 import com.smartdesk.api.ticket.service.CreateTicketCommand;
 import com.smartdesk.api.ticket.service.CreatedTicket;
 import com.smartdesk.api.ticket.service.TicketCreationService;
+import com.smartdesk.api.ticket.service.TicketQueryService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -23,11 +26,14 @@ import java.util.UUID;
 public class TicketController {
 
     private final TicketCreationService ticketCreationService;
+    private final TicketQueryService ticketQueryService;
 
     public TicketController(
-            TicketCreationService ticketCreationService
+            TicketCreationService ticketCreationService,
+            TicketQueryService ticketQueryService
     ) {
         this.ticketCreationService = ticketCreationService;
+        this.ticketQueryService = ticketQueryService;
     }
 
     @PostMapping
@@ -62,5 +68,27 @@ public class TicketController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
+    }
+
+    @GetMapping
+    public List<TicketSummaryResponse> listTickets(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        UUID requesterId = UUID.fromString(jwt.getSubject());
+
+        return ticketQueryService
+                .findForRequester(requesterId)
+                .stream()
+                .map(ticket -> new TicketSummaryResponse(
+                        ticket.id(),
+                        ticket.referenceCode(),
+                        ticket.title(),
+                        ticket.category(),
+                        ticket.priority(),
+                        ticket.status(),
+                        ticket.createdAt(),
+                        ticket.updatedAt()
+                ))
+                .toList();
     }
 }
