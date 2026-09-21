@@ -162,10 +162,8 @@ docs/                    Architecture decisions and technical notes
 .github/workflows/       Continuous integration
 compose.yaml             PostgreSQL + backend + frontend
 ```
+## Documentation
 
-See [docs/architecture.md](docs/architecture.md) for the system design and security boundaries. The complete machine-readable contract is in [docs/openapi.yaml](docs/openapi.yaml).
+Additional technical documentation is available in the [`docs`](docs/) directory.
 
-Additional documentation:
 
-- [Production deployment](docs/deployment.md)
-- [Portfolio project report](docs/project-report.md)
