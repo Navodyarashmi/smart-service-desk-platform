@@ -162,8 +162,14 @@ docs/                    Architecture decisions and technical notes
 .github/workflows/       Continuous integration
 compose.yaml             PostgreSQL + backend + frontend
 ```
-## Documentation
+## Application Preview
 
-Additional technical documentation is available in the [`docs`](docs/) directory.
+### Secure Sign-In
+
+![HelpHub secure sign-in](docs/images/login-page.png)
+
+### Employee Workspace
+
+![HelpHub employee dashboard](docs/images/employee-dashboard.png)
 
 
