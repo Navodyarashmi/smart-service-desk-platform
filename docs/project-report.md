@@ -29,7 +29,3 @@ The React and TypeScript single-page application communicates with a stateless S
 ## Outcome
 
 The project demonstrates frontend development, REST API design, relational modelling, authentication and authorization, secure file handling, automated testing, documentation, containerization, CI, and release preparation in one coherent portfolio application.
-
-## CV summary
-
-Built a role-based smart service desk using React, TypeScript, Spring Boot, PostgreSQL, JWT, Flyway, Docker, Nginx, and GitHub Actions. Implemented guarded ticket workflows, administrator access management, comments, internal notes, audit history, notifications, secure attachments, analytics, integration tests, and production deployment controls.
